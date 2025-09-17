@@ -1,1 +1,1 @@
-Various documents that have been collected through development. Mostly these are high level documents. Specific documentation is inside the server code in various folders (kept close to relevant code) named _documentation.md on the server or Documentation.kt on the client.
+Various documents (mostly high level) that have been collected through development. More specific documentation is inside the server code in various folders (kept close to relevant code) named _documentation.md on the server or Documentation.kt on the client.
