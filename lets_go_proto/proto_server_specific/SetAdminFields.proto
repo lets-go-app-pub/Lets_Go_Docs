@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+import "LoginToServerBasicInfo.proto";
+import "UserAccountStatusEnum.proto";
+
+option java_multiple_files = true;
+
+package set_admin_fields;
+
+//set a server activity, if the activity is found (by name) it will be updated
+message SetServerIconRequest {
+  LoginToServerBasicInfo login_info = 1;
+  bool push_back = 2; //if true will add this on as a new index, if false will update at the index number
+  uint64 index_number = 3; //index number of icon to update (will not be looked at if push_back is true)
+  //NOTE: if push_back is false and the index is not found then it will do nothing
+  bool icon_active = 4; //true if icon is active, false if it is not active
+
+  bytes icon_in_bytes = 5; //icon in byte string (PNG expected)
+  int32 icon_size_in_bytes = 6; //icon size in bytes
+}
+
+//set a server activity, if the activity is found (by name) it will be updated
+message SetServerActivityOrCategoryRequest {
+  LoginToServerBasicInfo login_info = 1;
+  bool delete_this = 2; //if set to true this activity or category name will be found and min_age will be set over the max allowed age so it will not be displayed
+  string display_name = 3; //name of activity or category (if any activities match the passed name they will be updated to this)
+  string icon_display_name = 4; //name of activity or category formatted to be displayed under icon on client
+  uint32 min_age = 5; //minimum age that can see this; ex: 18 would mean 18+ can see it
+  //NOTE: 'deleting' this will simply set the max_age to an age no one can be
+
+  double order_number = 6; //this field will only be applicable to categories, it is used to sort categories on client (in ascending order)
+  string color = 7; //this field will only be applicable to categories, it is the hex code for the category color
+  
+  //These values are only set when this represents an activity, not a category
+  uint64 category_index = 8; //index of the category this activity uses
+  uint64 icon_index = 9; //index of the icon this activity is used in
+}
+
+message SetServerValuesResponse {
+  bool successful = 1; //true if was successfully updated
+  repeated string error_messages = 2; //set if successful == false for any values
+}
+
+message SetAccessStatusRequest {
+  LoginToServerBasicInfo login_info = 1;
+  UserAccountStatus new_account_status = 2;
+  string inactive_message = 3;
+  uint64 duration_in_millis = 4;
+}
+
+message SetAccessStatusResponse {
+  bool successful = 1; //true if was successfully updated
+
+  string error_message = 2; //set if successful == false
+
+  int64 current_timestamp = 3; //set if successful == true
+  int64 final_timestamp = 4; //set if successful == true AND Suspended account status was passed
+}
+
+message RemoveUserPictureRequest {
+  LoginToServerBasicInfo login_info = 1;
+
+  string user_oid = 2;
+  string picture_oid = 3;
+}
+
+message SetAdminUnaryCallResponse {
+  bool successful = 1; //true if was successfully updated
+  string error_message = 2; //set if successful == false for any values
+}
+
+service SetAdminFieldsService {
+
+  //admin set functions
+  rpc SetServerCategoryRPC(stream SetServerActivityOrCategoryRequest) returns (SetServerValuesResponse) {} //Sets category server info
+  rpc SetServerActivityRPC(stream SetServerActivityOrCategoryRequest) returns (SetServerValuesResponse) {} //Sets activity server info
+  rpc SetServerIconRPC(stream SetServerIconRequest) returns (SetServerValuesResponse) {} //Sets icon server info
+  rpc SetServerAccessStatusRPC(SetAccessStatusRequest) returns (SetAccessStatusResponse) {}
+  rpc RemoveUserPictureRPC(RemoveUserPictureRequest) returns (SetAdminUnaryCallResponse) {}
+
+}

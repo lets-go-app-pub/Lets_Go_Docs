@@ -1,0 +1,147 @@
+syntax = "proto3";
+
+//option java_package = "type_of_chat_message";
+//
+//import "ChatRoomInfoMessage.proto";
+//
+////NOTE: these are used to identify chat message types on the server  (CHAT_ROOM_MESSAGE_TYPE) and client (MessagesDataEntity, messageType), be careful about modifying them
+////NOTE: names are based on how they are stored in the database, so for example a client will pass DIFFERENT_USER_OPENED_CHAT_ROOM for them-selves
+//enum MessageInstruction {
+//  CHAT_TEXT_MESSAGE = 0;
+//  PICTURE_MESSAGE = 1;
+//  LOCATION_MESSAGE = 2;
+//  MIME_TYPE_MESSAGE = 3; //a message from the soft keyboard in android stored as a URL
+//  INVITED_TO_CHAT_ROOM = 4; //sent when current user was invited to another chat room
+//  MESSAGE_EDITED = 5;
+//  MESSAGE_DELETED = 6;
+//  USER_KICKED_FROM_CHAT_ROOM = 7;
+//  USER_BANNED_FROM_CHAT_ROOM = 8;
+//  DIFFERENT_USER_JOINED_CHAT_ROOM = 9;
+//  DIFFERENT_USER_LEFT_CHAT_ROOM = 10;
+//  UPDATE_CHAT_ROOM_OBSERVED_TIME = 11; //sent when stream is started to send back any chat rooms requiring the last observed time to be updated; also sent by client to notify server it observed message(s) (NOTE: this is never actually stored on the server)
+//  THIS_USER_JOINED_CHAT_ROOM = 12; //sent when stream is started to send any new chat rooms the user is part of; also when user joins a new chat room; only sends chat room info itself, members send back with THIS_USER_JOINED_CHAT_ROOM
+//  THIS_USER_JOINED_CHAT_ROOM_MEMBER = 13; //sends a member back with info from THIS_USER_JOINED_CHAT_ROOM
+//  THIS_USER_JOINED_CHAT_ROOM_FINISHED = 14; //when a chat room is sent back with THIS_USER_JOINED_CHAT_ROOM, this will be sent back at the end to show the chat room info has all been sent
+//  THIS_USER_LEFT_CHAT_ROOM = 15; //sent when stream is started to send any chat rooms the user is no longer part of
+//  USER_ACTIVITY_DETECTED = 16; //this is sent when a user actively 'sees' a message in the chat room or joins a chat room
+//  CHAT_ROOM_NAME_UPDATED = 17;
+//  CHAT_ROOM_PASSWORD_UPDATED = 18;
+//  NEW_ADMIN_PROMOTED = 19; //this will be sent by the admin and the account_id field will be set to the new admin
+//  MATCH_CANCELED = 20; //this will be sent when a user cancels a match; (this is not necessary on android side but is useful on server side)
+//  HISTORY_CLEARED = 21; //this will not be sent, it is used by the client exclusively to store that the history was cleared
+//  LOADING_MESSAGE = 22; //this will not be sent, it is used by the client exclusively to show a specific message (a progress bar) in the chat message recycler view
+//}
+//
+//enum DeleteType {
+//  DELETE_TYPE_NOT_SET = 0; //this is the default value used for message types other than MESSAGE_DELETED, it should never be stored inside the server
+//  DELETED_ON_CLIENT = 1; //this is used on the client to show a message was deleted, it should never be stored inside the server
+//  DELETE_FOR_SINGLE_USER = 2; //this is used in sending a MESSAGE_DELETED from client->server
+//  //NOTE: it is very important that DELETE_FOR_ALL_USERS comes last, the database uses that it is the largest value in the enum
+//  DELETE_FOR_ALL_USERS = 3; //this is used in sending a MESSAGE_DELETED from client->server
+//}
+//
+////NOTE: the values here are mapped to the database entity on android, so unless the device will store the message don't put the value inside here (can put it inside ChatMessageToClient)
+//message TypeOfChatMessage {
+//
+//  MessageInstruction message_type = 1;
+//
+//  //NOTE: ChatRoomInfoMessage also has a chat_room_id field inside it; however it will only be used when an entire chat room is sent back
+//  string chat_room_id = 2; //chat room the action took place in
+//
+//  //if this chat room was created when 2 users swiped 'yes' on each other and this is first contact, this bool will be set to the other accounts oid, otherwise it will be ""
+//  string first_contact_with_oid = 3;
+//
+//  //chat message, name updated, password updated
+//  string message_text = 4;
+//
+//  //if message is reply
+//  bool is_reply = 5; //if this is a reply to a message will be set to true, otherwise false
+//  string reply_is_sent_from_oid = 6; //if is_reply is true, this will be the oid of user that sent the message being replied to
+//  string reply_is_from_message_oid = 7; //if is_reply is true, this will be the oid of the message being replied to
+//  MessageInstruction reply_is_from_message_type = 8; //if is_reply is true, this will be the type of message being replied to
+//  string reply_is_from_message_text = 9; //if is_reply == true && reply_is_from_message_type == CHAT_TEXT_MESSAGE_VALUE; this will be the text message
+//  bytes reply_is_from_thumbnail_in_bytes = 10; //if is_reply == true && (reply_is_from_message_type == PICTURE_MESSAGE_VALUE || reply_is_from_message_type == GIF_MESSAGE_VALUE); this will be the bytes for the thumbnail of the picture file
+//  int32 reply_is_from_thumbnail_file_size = 11; //if reply_is_from_thumbnail_in_bytes is set; will be the size of the file in bytes
+//  string reply_is_from_thumbnail_mime_type = 12; //if is_reply == true && reply_is_from_message_type == MIME_TYPE_MESSAGE; this will be the bytes for the thumbnail of the picture file
+//
+//  //message deleted type, used when sending a message from client to server
+//  DeleteType delete_type = 13;
+//
+//  //location
+//  double longitude = 14;
+//  double latitude = 15;
+//
+//  //picture, invite, message edited and message deleted
+//  string oid_value = 16; //the oid for this picture or the oid for the message to be edited (mongo oid)
+//
+//  //picture
+//  bytes picture_file_in_bytes = 17; //the bytes for the picture file itself
+//  int32 picture_file_size = 18; //the size of the file, used to check for corrupted data
+//
+//  //gif
+//  string url_of_download = 19; //the url of the gif to be downloaded
+//
+//  //image stats, used with gif and picture
+//  int32 image_height = 20; //the height of the image in pixels
+//  int32 image_width = 21; //the width of the image in pixels
+//
+//  //kicked or banned from chat room
+//  //invite to chat room, new admin promoted
+//  //leave chat room; if the account that left was ADMIN then account_id will be set to the new ADMIN account, otherwise will be set to ""
+//  string account_id = 22; //the account id of the user which this message is about
+//
+//  //thumbnail updated
+//  //user joined chat
+//  ChatRoomMemberInfoMessage member_info = 23;
+//
+//  //this user join chat room
+//  //this user leave remove chat room
+//  //invite to chat room
+//  ChatRoomInfoMessage chat_room = 24;
+//}
+
+message ReplyInfo {
+    //if message is reply
+    //if this is a reply to a message will be set to true, otherwise false
+    bool is_reply = 1;
+    string reply_is_sent_from_oid = 2; //if is_reply is true, this will be the oid of user that sent the message being replied to
+    string reply_is_from_message_oid = 3; //if is_reply is true, this will be the oid of the message being replied to
+    MessageInstruction reply_is_from_message_type = 3; //if is_reply is true, this will be the type of message being replied to
+    string reply_is_from_message_text = 4; //if is_reply == true && reply_is_from_message_type == CHAT_TEXT_MESSAGE_VALUE; this will be the text message
+    bytes reply_is_from_thumbnail_in_bytes = 5; //if is_reply == true && (reply_is_from_message_type == PICTURE_MESSAGE_VALUE || reply_is_from_message_type == GIF_MESSAGE_VALUE); this will be the bytes for the thumbnail of the picture file
+    int32 reply_is_from_thumbnail_file_size = 6; //if reply_is_from_thumbnail_in_bytes is set; will be the size of the file in bytes
+    string reply_is_from_thumbnail_mime_type = 7; //if is_reply == true && reply_is_from_message_type == MIME_TYPE_MESSAGE; this will be the bytes for the thumbnail of the picture file
+}
+
+message BasicChatMessageInfo {
+
+  //message oid as stored in server
+  string message_oid = 1;
+
+  //account OID message was sent by
+  string sent_by_account_id = 2;
+
+  //timestamp message was stored on server
+  int64 timestamp_stored_on_server = 3;
+
+  //set to true if this is set to be 'only stored' (not displayed to user,
+  //generally used with joining new chat room or initial user login)
+  bool only_store_message = 4;
+
+  //id of chat room message is from
+  string chat_room_id = 5;
+
+  //set to true if there is info stored inside ReplyInfo false if not
+  bool is_reply = 6;
+
+  //will be set if message is reply
+  ReplyInfo reply_info = 7;
+}
+
+
+message ChatTextMessage {
+  //chat room the action took place in
+  BasicChatMessageInfo basic_chat_message_info = 1;
+  //chat message
+  string message_text = 2;
+}

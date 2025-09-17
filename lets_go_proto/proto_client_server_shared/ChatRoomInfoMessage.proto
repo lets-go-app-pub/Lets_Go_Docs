@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+option java_package = "chatroominfo";
+
+import "MemberSharedInfoMessage.proto";
+import "AccountState.proto";
+
+//represents a single chat room
+message ChatRoomInfoMessage {
+
+    string chat_room_id = 1;
+    string chat_room_name = 2;
+    string chat_room_password = 3;
+
+    AccountStateInChatRoom account_state = 4; //account state of calling account
+    int64 user_last_activity_time = 5; //the last time this user viewed or was active in the chat room
+    int64 chat_room_last_activity_time = 6; //the last time the chat room experienced activity (compared to user_last_activity_time on client)
+    int64 chat_room_last_observed_time = 7; //the last time the user observed this chat room
+    int64 time_joined = 8; //the time this user joined the chat room
+    string match_made_chat_room_oid = 9; //if this chat room has been made to match 2 people after they swiped 'yes' on each other; this will be set to the other user's ID; otherwise it will be set to ""
+
+    double longitude_pinned_location = 10; //The longitude of the pinned location. If not set, defaults to chat_room_values::PINNED_LOCATION_DEFAULT_LONGITUDE.
+    double latitude_pinned_location = 11; //The latitude of the pinned location. If not set, defaults to chat_room_values::PINNED_LOCATION_DEFAULT_LATITUDE.
+
+    //The below values are only set if this is an event chat room.
+    string event_oid = 12; //The oid of the event. If not an event, defaults to chat_room_values::EVENT_ID_DEFAULT.
+    bytes qr_code_image_bytes = 13; //The bytestring of the QR code. If not an event OR not set, defaults to chat_room_values::QR_CODE_DEFAULT.
+    string qr_code_message = 14; //The message associated with the QR code to display to the user. If not an event OR not set, defaults to chat_room_values::QR_CODE_MESSAGE_DEFAULT.
+    int64 qr_code_timestamp = 15; //The timestamp the QR code was last updated on the server. If not an event OR not set, defaults to chat_room_values::QR_CODE_TIME_UPDATED_DEFAULT.
+}
+
+//represents the info of a single member/account of a chat room
+message ChatRoomMemberInfoMessage {
+    MemberSharedInfoMessage user_info = 1;
+
+    int64 account_last_activity_time = 2; //time this member was last active in the chat room (in milliseconds)
+    AccountStateInChatRoom account_state = 3; //account state of requested account
+}
+

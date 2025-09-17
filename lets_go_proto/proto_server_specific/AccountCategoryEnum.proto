@@ -1,0 +1,6 @@
+syntax = "proto3";
+
+enum AccountCategoryType {
+    ACTIVITY_TYPE = 0;
+    CATEGORY_TYPE = 1;
+};

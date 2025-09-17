@@ -1,0 +1,140 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+
+package setfields;
+
+import "StatusEnum.proto";
+import "CategoryTimeFrame.proto";
+import "LoginToServerBasicInfo.proto";
+import "FeedbackTypeEnum.proto";
+import "AlgorithmSearchOptions.proto";
+
+//set a type of feedback to its respective collection
+message SetFeedbackRequest {
+  LoginToServerBasicInfo login_info = 1;
+
+  FeedbackType feedback_type = 2; //the type of feedback returned
+  string info = 3; //the string the user entered as feedback
+  string activity_name = 4; //only used with ACTIVITY_SUGGESTION the name of the suggested activity
+}
+
+//set a field that is type string
+message SetStringRequest {
+  LoginToServerBasicInfo login_info = 1;
+  string set_string = 2; //the value to be set
+}
+
+message SetEmailRequest {
+  LoginToServerBasicInfo login_info = 1;
+  string set_email = 2; //the value to be set
+}
+
+//set birthday fields
+message SetBirthdayRequest {
+  LoginToServerBasicInfo login_info = 1;
+  int32 birth_year = 2; //birth year to be set
+  int32 birth_month = 3; //birth month to be set
+  int32 birth_day_of_month = 4; //birth day of month to be set
+}
+
+//set a picture field
+message SetPictureRequest {
+  LoginToServerBasicInfo login_info = 1;
+  bytes file_in_bytes = 2; //the bytes for the file itself
+  int32 file_size = 3; //the size of the file, used to check for corrupted data
+  bytes thumbnail_in_bytes = 4; //the bytes for the thumbnail
+  int32 thumbnail_size = 5; //the size of the thumbnail, used to check for corrupted data
+  int32 picture_array_index = 6; //index of the picture array requested (starts at 0)
+}
+
+//set the categories field
+message SetCategoriesRequest {
+  LoginToServerBasicInfo login_info = 1;
+  repeated CategoryActivityMessage category = 2; //all categories array
+}
+
+//set age range
+message SetAgeRangeRequest {
+  LoginToServerBasicInfo login_info = 1;
+  int32 min_age = 2; //all minimum end of age range (inclusive)
+  int32 max_age = 3; //all maximum end of age range (inclusive)
+}
+
+//set gender range
+message SetGenderRangeRequest {
+  LoginToServerBasicInfo login_info = 1;
+  repeated string gender_range = 2; //list of the genders user is willing to match with
+}
+
+//set a field that is type string
+message SetBioRequest {
+  LoginToServerBasicInfo login_info = 1;
+  bytes set_string = 2; //the bio converted to bytes using utf-8 encoding
+}
+
+//set user max distance
+message SetMaxDistanceRequest {
+  LoginToServerBasicInfo login_info = 1;
+  int32 max_distance = 2; //maximum distance user is willing to match with (in miles)
+}
+
+//generic set field response
+message SetFieldResponse {
+  ReturnStatus return_status = 1; //return status
+  /** IF TIMESTAMP IS -2 THEN INVALID DATA WAS PASSED **/
+  int64 timestamp = 2; //timestamp the item was updated
+  string error_string = 3; //optional error string, used with admin requests
+}
+
+//birthday set field response
+message SetBirthdayResponse {
+  ReturnStatus return_status = 1; //return status
+  int32 age = 2; //birth year to be set
+  /** IF TIMESTAMP IS -2 THEN INVALID DATA WAS PASSED **/
+  int64 timestamp = 3; //timestamp the item was updated + 1 (for storage reasons), -1 if data was not stored, -2 if data is invalid
+
+  //below fields are used with admin requests
+  string error_string = 4; //optional error string, only returned if ReturnStatus != SUCCESS
+  int32 min_age_range = 5; //min age range
+  int32 max_age_range = 6; //max age range
+}
+
+//set feedback response
+message SetFeedbackResponse {
+  ReturnStatus return_status = 1; //return status
+}
+
+message SetAlgorithmSearchOptionsRequest {
+  LoginToServerBasicInfo login_info = 1;
+  AlgorithmSearchOptions matching_status = 2;
+}
+
+message SetOptedInToPromotionalEmailRequest {
+  LoginToServerBasicInfo login_info = 1;
+  bool opted_in_to_promotional_email = 2;
+}
+
+service SetFieldsService {
+
+  //setGender, setAgeRange, setGenderRange, setMaxDistance and setCategories clear the matches from client and server
+
+  rpc SetBirthdayRPC(SetBirthdayRequest) returns (SetBirthdayResponse) {} //Sets birthday info in the server //3 ints
+  rpc SetEmailRPC(SetEmailRequest) returns (SetFieldResponse) {} //Sets email address info in the server //string
+  rpc SetGenderRPC(SetStringRequest) returns (SetFieldResponse) {} //Sets gender info in the server //int and string
+  rpc SetFirstNameRPC(SetStringRequest) returns (SetFieldResponse) {} //Sets gender info in the server //string
+  rpc SetPicturesRPC(SetPictureRequest) returns (SetFieldResponse) {} //Sets pictures info in the server, //bytes int
+  rpc SetCategoriesRPC(SetCategoriesRequest) returns (SetFieldResponse) {} //Sets categories info in the server //message array
+
+  rpc SetAgeRangeRPC(SetAgeRangeRequest) returns (SetFieldResponse) {} //Sets age range in server //2 ints
+  rpc SetGenderRangeRPC(SetGenderRangeRequest) returns (SetFieldResponse) {} //Sets gender range in server //repeated string
+  rpc SetUserBioRPC(SetBioRequest) returns (SetFieldResponse) {} //Sets user bio in server //string
+  rpc SetUserCityRPC(SetStringRequest) returns (SetFieldResponse) {} //Sets user city in server //string
+  rpc SetMaxDistanceRPC(SetMaxDistanceRequest) returns (SetFieldResponse) {} //Sets max distance in server //int
+
+  rpc SetAlgorithmSearchOptionsRPC(SetAlgorithmSearchOptionsRequest) returns (SetFieldResponse) {}
+
+  rpc SetOptedInToPromotionalEmailRPC(SetOptedInToPromotionalEmailRequest) returns (SetFieldResponse) {}
+
+  rpc SetFeedbackRPC(SetFeedbackRequest) returns (SetFeedbackResponse) {} //Stores feedback in the server
+}

@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+import "RequestMessages.proto";
+import "LoginToServerBasicInfo.proto";
+import "AdminLevelEnum.proto";
+
+package request_admin_info;
+
+message InitialProgramOpenRequestInfoRequest {
+  LoginToServerBasicInfo login_info = 1;
+}
+
+message ServerAddressInfo {
+  string address = 1;
+  int32 port = 2;
+}
+
+message GlobalValuesToPassMessage {
+  uint32 minimum_activity_or_category_name_size = 1; //this is inclusive, so use >= not >
+  uint32 maximum_activity_or_category_name_size = 2; //this is inclusive, so use <= not <
+  uint32 lowest_allowed_age = 3; //this is inclusive, it will probably be 13
+  uint32 highest_allowed_age = 4; //this is inclusive, it will probably be 120
+  uint32 activity_icon_width_in_pixels = 5; //width of icon in pixels on android client
+  uint32 activity_icon_height_in_pixels = 6; //height of icon in pixels on android client
+  uint32 minimum_allowed_distance = 7; //min distance allowed by server to match with
+  uint32 maximum_allowed_distance = 8; //max distance allowed by server to match with
+  uint32 maximum_number_allowed_bytes = 9; //max allowed bytes in various shorter string (such as gender)
+  uint32 maximum_number_allowed_bytes_first_name = 10; //max allowed bytes in first name
+  uint32 maximum_number_allowed_bytes_user_bio = 11; //max allowed bytes in bio
+  uint32 minimum_number_allowed_bytes_inactive_message = 12; //min allowed bytes in inactive message for suspended/banned
+  uint32 maximum_number_allowed_bytes_inactive_message = 13; //max allowed bytes in inactive message for suspended/banned
+  string email_authorization_regex = 14; //regex for authorizing email
+  string male_gender_string = 15; //string representing male
+  string female_gender_string = 16; //string representing female
+  string everyone_gender_string = 17; //string representing everyone
+  uint32 number_genders_can_match_with = 18; //string representing everyone
+  uint64 minimum_time_for_suspension = 19; //max time a user can be suspended (in millis)
+  uint64 maximum_time_for_suspension = 20; //min time a user can be suspended (in millis)
+  int32 number_times_timed_out_before_ban = 21; //number times timed out before ban
+  int32 max_number_of_reported_users_admin_can_request_notified = 22; //max number reports request-able
+  int64 time_before_report_checkout_expires = 23; //max number reports request-able
+  repeated ServerAddressInfo server_address_info = 24; //server address info
+  uint64 maximum_number_allowed_bytes_to_request_error_message = 25; //maximum bytes interface can request, used with extract errors
+  string extract_errors_total_bytes_key = 26; //key for accessing trailing metadata from extract errors grpc call
+  string extract_errors_extracted_bytes_key = 27; //key for accessing trailing metadata from extract errors grpc call
+  string extract_errors_total_docs_key = 28; //key for accessing trailing metadata from extract errors grpc call
+  string extract_errors_extracted_docs_key = 29; //key for accessing trailing metadata from extract errors grpc call
+  int32 extract_errors_max_search_results = 30; //max number of error docs possible to be extracted (see server function extractErrorsImplementation() for details)
+  int32 minimum_number_allowed_bytes_modify_error_message_reason = 31; //min allowed bytes in reason to modify error message
+  int32 maximum_number_allowed_bytes_modify_error_message_reason = 32; //max allowed bytes in reason to modify error message
+  int32 maximum_number_allowed_bytes_event_title = 33; //maximum number allowed bytes in event title
+  int32 maximum_qr_code_size_in_bytes = 34; //maximum number allowed bytes in qr code
+  int32 maximum_number_allowed_bytes_user_qr_code_message = 35; //maximum number allowed bytes in qr code message
+  string event_gender_value = 36; //the value that events have their gender field set to
+  int32 event_age_value = 37; //the value that events have their age field set to
+  int32 image_quality_value = 38; //the value that jpg pictures are compressed to
+  int32 picture_thumbnail_maximum_cropped_size_px = 39; //the maximum size a user picture thumbnail can be in pixels
+  int32 picture_maximum_cropped_size_px = 40; //the maximum size a user picture can be in pixels
+  int32 number_pictures_stored_per_account = 41; //maximum number of user or event pictures able to be stored in an account
+  int32 maximum_picture_thumbnail_size_in_bytes = 42; //maximum size of user or event thumbnails in bytes
+  int32 maximum_picture_size_in_bytes = 43; //maximum size of user or event pictures in bytes
+}
+
+message InitialProgramOpenRequestInfoResponse {
+  bool success = 1;
+
+  //only used if success == false
+  string error_msg = 2;
+
+  //only used if success == true
+  repeated ServerActivityOrCategoryMessage server_categories = 3;
+  repeated ServerActivityOrCategoryMessage server_activities = 4;
+  AdminLevelEnum admin_level = 5;
+  AdminPrivileges admin_privileges = 6;
+
+  GlobalValuesToPassMessage globals = 7;
+
+}
+
+service RequestAdminInfoService {
+  rpc InitialProgramOpenRequestInfoRPC(InitialProgramOpenRequestInfoRequest) returns (InitialProgramOpenRequestInfoResponse) {}
+}

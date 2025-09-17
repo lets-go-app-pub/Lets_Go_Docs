@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+
+package loginfunction;
+
+import "AccountLoginTypeEnum.proto";
+import "AccessStatusEnum.proto";
+import "CategoryTimeFrame.proto";
+import "RequestMessages.proto";
+import "PreLoginTimestamps.proto";
+import "LoginValuesToReturnToClient.proto";
+import "AlgorithmSearchOptions.proto";
+import "UserSubscriptionStatus.proto";
+
+//send ~ for the empty string values instead of leaving them empty to tell
+message LoginRequest {
+
+  string phone_number = 1; //pass phone number to log in with
+  string account_id = 2; //ID of account (used for google and facebook login, may be deprecated later)
+  string installation_id = 3; //pass current id of the identifying installation/device
+  uint32 lets_go_version = 4; //pass current version of app
+
+  AccountLoginType account_type = 5; // type of account
+
+  //for statistics purposes
+  string device_name = 6; //device name
+  int32 api_number = 7; //device api number
+
+  //-1 means that the value has never been set by the client
+  int64 birthday_timestamp = 8; //timestamp when birthday was last updated
+  int64 email_timestamp = 9; //timestamp when email was last updated
+  int64 gender_timestamp = 10; //timestamp when gender was last updated
+  int64 name_timestamp = 11; //timestamp when name was last updated
+  int64 categories_timestamp = 12; //timestamp when categories was last updated
+  int64 post_login_info_timestamp = 13; //timestamp when post login info was last updated
+
+  repeated int64 icon_timestamps = 14; //timestamps icon last updated
+}
+
+//send ~ for the empty values instead of leaving them empty to tell
+//use -1 for empty integer
+message LoginResponse {
+
+  LoginValuesToReturnToClient.LoginAccountStatus return_status = 1; //enum for status of response
+  AccessStatus access_status = 2; //this will return if login is permitted or not and the reason if not
+  string account_oid = 3; //this accounts OID; returned with LOGGED_IN return_status
+  string login_token = 4; //login token, used for querying server; returned with LOGGED_IN return_status
+  int32 sms_cool_down = 5; //will be -1 unless the SMS_ON_COOL_DOWN was returned to status
+
+  //NOTE: (this statement is a double negative 'not' needed & false means true)
+  bool birthday_not_needed = 6; //return true if birthday is not needed for SMS verification
+
+  LoginValuesToReturnToClient login_values_to_return_to_client = 7;
+
+  int64 server_timestamp = 8; //timestamp used by device to update any fields that require it
+
+  //timestamps will be sent back to be used to see if info was updated
+  PreLoginTimestampsMessage pre_login_timestamps = 9;
+  repeated int64 pictures_timestamps = 10;
+  BirthdayMessage birthday_info = 11;
+  EmailMessage email_info = 12;
+  string gender = 13;
+  string name = 14;
+  repeated CategoryActivityMessage categories_array = 15; //the list of user categories and activities
+
+  int64 post_login_timestamp = 16;
+  PostLoginMessage post_login_info = 17; //this will only have values set in the account does not need more mandatory info
+
+  AlgorithmSearchOptions algorithm_search_options = 18; //this will always be passed back if successfully logged in
+
+  string phone_number = 19;
+  string time_out_message = 20; //set if access_status suspended or banned; stores the message
+  int64 time_out_duration_remaining = 21; //set if access_status suspended; stores the time remaining (in ms)
+
+  repeated string blocked_accounts = 22; //list of blocked account OIDs
+
+  UserSubscriptionStatus subscription_status = 23; //always passed back
+
+  int64 subscription_expiration_time = 24; //always passed back
+
+  bool opted_in_to_promotional_email = 25; //always passed back
+}
+
+service LoginService {
+  //attempts to log the user in
+  rpc LoginRPC(LoginRequest) returns (LoginResponse) {}
+}

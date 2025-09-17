@@ -1,0 +1,374 @@
+syntax = "proto3";
+
+package grpc_chat_commands;
+
+option cc_enable_arenas = true;
+
+import "StatusEnum.proto";
+import "TypeOfChatMessage.proto";
+import "ChatMessageToClientMessage.proto";
+import "ReportMessages.proto";
+import "LoginToServerBasicInfo.proto";
+import "UpdateOtherUserMessages.proto";
+import "CreatedChatRoomInfo.proto";
+
+//NOTE: CONVENTION when a user 'joins' a chat room the chat room needs to be added to the 'chat rooms' list first
+// only after it is added should the verified OID be added to the actual chat room header. On the other hand when
+// a user 'leaves' a chat room the value needs to be removed from the chat room first then the verified account.
+// (see ChatRoomCommandsImpl class on server for more info)
+
+enum ChatRoomStatus {
+
+  SUCCESSFULLY_JOINED = 0;
+  ACCOUNT_WAS_BANNED = 1;
+  ALREADY_IN_CHAT_ROOM = 2;
+  CHAT_ROOM_DOES_NOT_EXIST = 3; //ID does not exist
+  INVALID_CHAT_ROOM_ID = 4; //chat room ID was not 8 digits
+  INVALID_CHAT_ROOM_PASSWORD = 5; //chat room password was more than the max num of chars (0 is fine)
+
+  USER_TOO_YOUNG_FOR_CHAT_ROOM = 6; //user age is < MIN_AGE required to join chat room
+}
+
+//NOTE: Was using these as more elaborate return values, however the clients response was the same to
+// all of them.
+enum ValidRequestInfo {
+  INVALID_CHAT_ROOM_ID_PASSED = 0; //this means the account ID was not 8 chars
+  INVALID_REQUEST_DATA_PASSED = 1; //this means invalid data was passed as a parameter outside chat room id
+  ACCOUNT_ID_WAS_NOT_IN_CHAT_ROOM = 2; //this means the account OID passed (not the one passed FROM) was not inside the chat room
+  CHAT_ROOM_DOES_NOT_EXIST_ON_SERVER = 3;
+  CHAT_ROOM_ADMIN_REQUIRED = 4;
+  SUCCESS = 5;
+}
+
+message ClientMessageToServerRequest {
+
+  LoginToServerBasicInfo login_info = 1;
+
+  string message_uuid = 2; //the message UUID generated on android
+
+  TypeOfChatMessage message = 3; //type of message to pass
+  int64 timestamp_observed = 4; //the observed timestamp on the server
+}
+
+message ClientMessageToServerResponse {
+
+  ReturnStatus return_status = 1; //return status
+  bool user_not_in_chat_room = 2; //will be set on ReturnStatus SUCCESS if the user was not found in the chat room
+
+  //if the message type was UPDATE_OBSERVED_TIME_MESSAGE, this will be the error checked timestamp_observed from the request
+  int64 timestamp_stored = 3; //used to show time the timestamp was stored in the server
+
+  string picture_oid = 4; //oid of picture; only set if TypeOfChatMessage == PICTURE_MESSAGE
+}
+
+message CreateChatRoomRequest {
+
+  LoginToServerBasicInfo login_info = 1;
+
+  string chat_room_name = 2; //the name for the new chat room
+}
+
+message CreateChatRoomResponse {
+
+  ReturnStatus return_status = 1; //return status
+
+  string chat_room_id = 2; //unique id for chat room
+  string chat_room_name = 3; //the name for the new chat room (could have been modified by server)
+  string chat_room_password = 4; //randomly generated password
+
+  ChatMessageToClient chat_room_cap_message = 5; //chat room cap message
+  ChatMessageToClient current_user_joined_chat_message = 6; //no info from the user is actually returned, skeleton
+
+  //  string cap_message_uuid = 5; //the uuid of the cap message, message timestamp is cap_message_timestamp
+  //  int64 cap_message_timestamp = 6; //in ms
+
+  //  string user_joined_message_uuid = 7; //the uuid of this user joining the chat room, message timestamp is last_activity_time_timestamp
+  int64 last_activity_time_timestamp = 7; //in ms
+
+  CreatedChatRoomInfo chat_room_info = 8;
+}
+
+message JoinChatRoomRequest {
+
+  LoginToServerBasicInfo login_info = 1;
+
+  string chat_room_id = 2;
+  string chat_room_password = 3;
+}
+
+message JoinChatRoomResponse {
+
+  repeated ChatMessageToClient messages_list = 1; //contains all chat messages to stream back to client (unless too many then it will split them up)
+  ChatRoomStatus chat_room_status = 2; //set if response is set to true to show different possible status of the room
+}
+
+message LeaveChatRoomRequest {
+
+  LoginToServerBasicInfo login_info = 1;
+
+  string chat_room_id = 2;
+}
+
+message LeaveChatRoomResponse {
+
+  ReturnStatus return_status = 1; //return status
+
+  int64 timestamp_stored = 2; //used to show time the timestamp message was stored in the server; -2 means invalid parameters passed
+}
+
+message RemoveFromChatRoomRequest {
+
+  enum KickOrBan {
+    KICK = 0;
+    BAN = 1;
+  }
+
+  LoginToServerBasicInfo login_info = 1;
+
+  string message_uuid = 2;
+
+  KickOrBan kick_or_ban = 3; //sets to kick or permanently ban the person from the chat room
+
+  string chat_room_id = 4;
+
+  string account_id_to_remove = 5;
+}
+
+message RemoveFromChatRoomResponse {
+
+  ReturnStatus return_status = 1; //return status
+
+  //will be set with SUCCESS return_status
+  //could be set to true if the sending user was not admin OR if the target
+  // user was not in the chat room
+  bool operation_failed = 2;
+
+  int64 timestamp_stored = 3; //used to show time the timestamp message was stored in the server; -2 means invalid message passed
+}
+
+//message MemberInfoForUpdates {
+//
+//  string account_oid = 1;
+//  AccountStateInChatRoom account_state = 2;
+//
+//  //these 3 will only be set to check info if the account state does not represent 'in the chat room'
+//  int32 thumbnail_size_in_bytes = 3;
+//  int32 thumbnail_index_number = 4;
+//  int64 thumbnail_timestamp = 5;
+//
+//  string first_name = 6;
+//
+//  int32 age = 7; //there is no timestamp for age so passing it directly
+//
+//  int64 member_info_last_updated_timestamp = 8; //last time the member info besides the pictures was updated
+//  repeated PictureIndexInfo pictures_last_updated_timestamps = 9;
+//}
+
+message UpdateSingleChatRoomMemberRequest {
+
+  LoginToServerBasicInfo login_info = 1;
+
+  string chat_room_id = 2;
+
+  //the single member the client wants to update
+  OtherUserInfoForUpdates chat_room_member_info = 3;
+}
+
+message PromoteNewAdminRequest {
+
+  LoginToServerBasicInfo login_info = 1;
+
+  string chat_room_id = 2;
+
+  string new_admin_account_oid = 3;
+
+  string message_uuid = 4;
+}
+
+message PromoteNewAdminResponse {
+
+  ReturnStatus return_status = 1; //return status
+
+  //Will be set to true if sending user AccountState==Admin and target user AccountState==User, false otherwise.
+  //For example this could happen when the target user leaves the chat room before this rpc is processed.
+  bool user_account_states_matched = 2;
+
+  int64 timestamp_message_stored = 3;
+}
+
+message UpdateChatRoomInfoRequest {
+
+  LoginToServerBasicInfo login_info = 1;
+
+  string chat_room_id = 2;
+
+  enum ChatRoomTypeOfInfoToUpdate{
+    UPDATE_CHAT_ROOM_NAME = 0;
+    UPDATE_CHAT_ROOM_PASSWORD = 1;
+  }
+
+  ChatRoomTypeOfInfoToUpdate type_of_info_to_update = 3;
+  string new_chat_room_info = 4; //chat room info to be updated
+
+  string message_uuid = 5;
+}
+
+message UpdateChatRoomInfoResponse {
+
+  ReturnStatus return_status = 1; //return status
+
+  //will be set with SUCCESS return_status
+  //Will be set to true if the sending user was not admin (could be an order
+  // issue where the user promoted another to admin before this message was received).
+  bool operation_failed = 2;
+
+  int64 timestamp_message_stored = 3;
+}
+
+message SetPinnedLocationRequest {
+
+  LoginToServerBasicInfo login_info = 1;
+
+  string chat_room_id = 2;
+
+  double new_pinned_longitude = 3;
+  double new_pinned_latitude = 4;
+
+  string message_uuid = 5;
+}
+
+message SetPinnedLocationResponse {
+
+  ReturnStatus return_status = 1; //return status
+
+  //will be set with SUCCESS return_status
+  //Will be set to true if the sending user was not admin (could be an order
+  // issue where the user promoted another to admin before this message was received).
+  bool operation_failed = 2;
+
+  int64 timestamp_message_stored = 3;
+}
+
+message UnMatchRequest {
+
+  LoginToServerBasicInfo login_info = 1;
+
+  string chat_room_id = 2;
+
+  string matched_account_oid = 3;
+}
+
+message UnMatchResponse {
+  ReturnStatus return_status = 1; //return status
+  int64 timestamp = 2;
+}
+
+message BlockAndReportChatRoomRequest {
+    UserMatchOptionsRequest match_options_request = 1;
+    string chat_room_id = 2;
+    bool un_match = 3; //will be set to true if user should run 'un_match' before setting the block and report
+}
+
+message UnblockOtherUserRequest {
+  LoginToServerBasicInfo login_info = 1;
+
+  string user_to_unblock_account_id = 2; //the account ID
+}
+
+message UnblockOtherUserResponse {
+
+  ReturnStatus return_status = 1; //return status
+  int64 timestamp = 2;
+}
+
+message ChatMessagesList {
+  repeated ChatMessageToClient messages_list = 1;
+}
+
+message UpdateChatRoomAddendum {
+  int64 current_timestamp = 1;
+
+  //will be set to true if the pictures were checked for updates, false if less than full picture was returned (this is
+  // closely related to HowToHandleMemberPictures enum on the server, when HowToHandleMemberPictures == REQUEST_ALL_PICTURE_INFO
+  // then this will be set to true)
+  bool pictures_checked_for_updates = 2;
+}
+
+message UpdateChatRoomInfo {
+
+  //all 3 of these will be passed back if ANY require an update or none of them will be
+  string chat_room_name = 1;
+  string chat_room_password = 2;
+  int64 chat_room_last_activity_time = 3;
+
+  double pinned_location_longitude = 4;
+  double pinned_location_latitude = 5;
+
+  string event_oid = 6;
+}
+
+message UpdateQrCode {
+  bytes qr_code_image_bytes = 1; //The bytestring of the QR code image. If not an event OR not set, defaults to chat_room_values::QR_CODE_DEFAULT.
+  string qr_code_message = 2; //The message associated with the QR code to display to the user. If not an event OR not set, defaults to chat_room_values::QR_CODE_MESSAGE_DEFAULT.
+  int64 qr_code_time_updated = 3; //The timestamp the QR code was last updated. If not an event OR not set, defaults to chat_room_values::QR_CODE_TIME_UPDATED_DEFAULT.
+}
+
+message UpdateTimestampForUserActivityMessage {
+  bool user_exists_in_chat_room = 1;
+  int64 timestamp_returned = 2;
+}
+
+message UpdateChatRoomRequest {
+
+  LoginToServerBasicInfo login_info = 1;
+  string chat_room_id = 2;
+  string chat_room_name = 3;
+  string chat_room_password = 4;
+  int64 chat_room_last_activity_time = 5;
+  int64 chat_room_last_updated_time = 6;
+
+  //NOTE: server expects all members to be sent for updates
+  repeated OtherUserInfoForUpdates chat_room_member_info = 7;
+
+  //Set these to default values if not set.
+  double pinned_location_longitude = 8;
+  double pinned_location_latitude = 9;
+  int64 qr_code_last_timestamp = 10;
+  string event_oid = 11;
+}
+
+message UpdateChatRoomResponse {
+  oneof MessageUpdate {
+    ChatMessagesList chat_messages_list = 1; //contains all chat messages to stream back to client (unless too many then it will split them up)
+    UpdateChatRoomInfo chat_room_info = 2; //contains basic chat room info
+    UpdateTimestampForUserActivityMessage user_activity_message = 3; //contains the timestamp the info was returned (unless an error occurs will always be sent back)
+    UpdateOtherUserResponse member_response = 4; //contains info on a single member update
+    UpdateChatRoomAddendum response_addendum = 5; //will be sent at the end of the stream as the final message unless an error occurs (could be trailing metadata, however trailing metadata is a bit difficult to work with in java)
+    ReturnStatus return_status = 6; //return status, used for certain errors, otherwise the other oneof elements will send their own errors
+    UpdateQrCode qr_code = 7; //qr code; will only be sent back if the chat room is an event chat room, is not expired or canceled and contains a qr code
+    UpdateOtherUserResponse event_response = 8; //contains info on the event info (remember that
+  }
+}
+
+service ChatRoomMessagesService {
+
+  rpc ClientMessageToServerRPC(ClientMessageToServerRequest) returns (ClientMessageToServerResponse) {}
+  rpc CreateChatRoomRPC(CreateChatRoomRequest) returns (CreateChatRoomResponse) {}
+  rpc JoinChatRoomRPC(JoinChatRoomRequest) returns (stream JoinChatRoomResponse) {}
+  rpc LeaveChatRoomRPC(LeaveChatRoomRequest) returns (LeaveChatRoomResponse) {}
+  rpc RemoveFromChatRoomRPC(RemoveFromChatRoomRequest) returns (RemoveFromChatRoomResponse) {}
+  rpc UnMatchRPC(UnMatchRequest) returns (UnMatchResponse) {}
+  rpc BlockAndReportChatRoomRPC(BlockAndReportChatRoomRequest) returns (UserMatchOptionsResponse) {}
+  rpc UnblockOtherUserRPC(UnblockOtherUserRequest) returns (UnblockOtherUserResponse) {}
+  //rpc GetSingleChatImageRPC(GetSingleChatImageRequest) returns (GetSingleChatImageResponse) {}
+
+  //chat room admin commands
+  rpc PromoteNewAdminRPC(PromoteNewAdminRequest) returns (PromoteNewAdminResponse) {}
+  rpc UpdateChatRoomInfoRPC(UpdateChatRoomInfoRequest) returns (UpdateChatRoomInfoResponse) {} //currently updates either name or password
+  rpc SetPinnedLocationRPC(SetPinnedLocationRequest) returns (SetPinnedLocationResponse) {}
+
+  //update current members RPCs
+  rpc UpdateSingleChatRoomMemberRPC(UpdateSingleChatRoomMemberRequest) returns (UpdateOtherUserResponse) {}
+  rpc UpdateChatRoomRPC(UpdateChatRoomRequest) returns (stream UpdateChatRoomResponse) {}
+
+}

@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+
+package loginsupport;
+
+import "StatusEnum.proto";
+import "AccessStatusEnum.proto";
+import "PreLoginTimestamps.proto";
+import "RequestMessages.proto";
+import "LoginValuesToReturnToClient.proto";
+import "LoginToServerBasicInfo.proto";
+
+message LoginSupportRequest {
+  LoginToServerBasicInfo login_info = 1;
+}
+
+message LoginSupportResponse {
+  ReturnStatus return_status = 1;
+  int64 timestamp = 2;
+}
+
+message NeededVeriInfoRequest {
+
+  LoginToServerBasicInfo login_info = 1;
+
+  double client_longitude = 2; //the longitude used to run the algorithm for the client
+  double client_latitude = 3; //the latitude used to run the algorithm for the client
+}
+
+message NeededVeriInfoResponse {
+  ReturnStatus return_status = 1; //enum for status of response
+  AccessStatus access_status = 2; //this will return if login is permitted or not and the reason if not
+
+  PreLoginTimestampsMessage pre_login_timestamps = 3;
+  repeated int64 picture_timestamps = 4; //timestamp when pictures was last updated each value being -1 means it is unused
+
+  //pass back the default post login info from the server
+  PostLoginMessage post_login_info = 5; //will return post login info if the access_status is set to access granted
+  int64 server_timestamp = 6; //timestamp passed from the server
+}
+
+service LoginSupportService {
+
+  rpc DeleteAccountRPC(LoginSupportRequest) returns (LoginSupportResponse) {} //DeleteAccount function
+  rpc LogoutRPC(LoginSupportRequest) returns (LoginSupportResponse) {} //LogoutFunction
+  rpc NeededVeriInfoRPC(NeededVeriInfoRequest) returns (NeededVeriInfoResponse) {} //FindNeededVerificationInfo function
+}

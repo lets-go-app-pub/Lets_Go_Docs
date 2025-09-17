@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option java_package = "created_chat_room_info";
+
+import "ChatMessageToClientMessage.proto";
+
+message CreatedChatRoomInfo {
+  string chat_room_id = 1; //unique id for chat room
+  string chat_room_name = 2; //the name for the new chat room (could have been modified by server)
+  string chat_room_password = 3; //randomly generated password
+
+  ChatMessageToClient chat_room_cap_message = 4; //chat room cap message
+  ChatMessageToClient current_user_joined_chat_message = 5; //no info from the user is actually returned, skeleton
+
+  //  string cap_message_uuid = 5; //the uuid of the cap message, message timestamp is cap_message_timestamp
+  //  int64 cap_message_timestamp = 6; //in ms
+
+  //  string user_joined_message_uuid = 7; //the uuid of this user joining the chat room, message timestamp is last_activity_time_timestamp
+  int64 last_activity_time_timestamp = 6; //in ms
+}

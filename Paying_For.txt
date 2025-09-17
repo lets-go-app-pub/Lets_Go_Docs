@@ -1,0 +1,14 @@
+PAYING FOR
+-flaticon/freepik (Need to change this subscription to a company type (if its possible) but need a Tax ID for that)
+-servers
+--Linode
+--goDaddy
+--hostwinds
+--digitalOcean
+-DNS
+--goDaddy
+--hostwinds
+-Website https SSL cert from goDaddy
+-twillio
+-send grid
+

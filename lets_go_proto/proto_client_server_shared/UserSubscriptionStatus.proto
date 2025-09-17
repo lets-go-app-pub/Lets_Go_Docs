@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+option java_package = "user_subscription_status";
+
+enum UserSubscriptionStatus {
+  NO_SUBSCRIPTION = 0; //this is the default value, it means the user is not a subscriber
+  BASIC_SUBSCRIPTION = 1; //this is the lowest subscription level
+}

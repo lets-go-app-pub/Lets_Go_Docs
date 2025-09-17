@@ -1,0 +1,145 @@
+syntax = "proto3";
+
+import "LoginToServerBasicInfo.proto";
+import "RequestMessages.proto";
+import "CategoryTimeFrame.proto";
+import "DisciplinaryActionType.proto";
+import "UserAccountStatusEnum.proto";
+import "UserSubscriptionStatus.proto";
+import "UserAccountType.proto";
+import "LetsGoEventStatus.proto";
+
+message RequestUserAccountInfoRequest {
+  LoginToServerBasicInfo login_info = 1;
+
+  oneof account_identification {
+    string user_account_oid = 2;
+    string user_phone_number = 3;
+  }
+
+  //set to true to request an event or false to request a user
+  bool request_event = 4;
+}
+
+message PictureMessageResult {
+  int64 timestamp = 1;
+  //Set to true if picture is from the deleted pictures collection.
+  bool picture_is_deleted = 2;
+  //Set to true if the pictures references in chat rooms were deleted AFTER the picture was moved to the deleted
+  // pictures collection. This is not the same as simply being moved to deleted pictures collection.
+  bool picture_references_have_been_deleted = 3;
+  PictureMessage picture = 4;
+}
+
+message UserDisciplinaryAction {
+  int64 timestamp_submitted = 1; //time this action was submitted
+  int64 timestamp_ends = 2; //time this action expires
+  DisciplinaryActionTypeEnum type = 3;
+  string reason = 4; //reason action was taken
+  string admin_name = 5; //admin name that sent request
+}
+
+message LocationMessage {
+  double client_longitude = 1; //the longitude used to run the algorithm for the client
+  double client_latitude = 2; //the latitude used to run the algorithm for the client
+}
+
+message EventValues {
+  string created_by = 1;
+  string chat_room_id = 2;
+  string event_title = 3;
+  LetsGoEventStatus event_state = 4;
+}
+
+message UserCreatedEvent {
+    string event_oid = 1;
+    int64 expiration_time_long = 2;
+    LetsGoEventStatus event_state = 3;
+}
+
+message CompleteUserAccountInfo {
+
+  //true if the account is from the deleted collection
+  //false if from user accounts collection
+  bool account_deleted = 1;
+
+  UserAccountStatus account_status = 2; //ACCOUNT_STATUS_KEY
+  string inactive_message = 3; //ACCOUNT_INACTIVE_MESSAGE_KEY
+  int32 number_of_times_timed_out = 4; //ACCOUNT_NUMBER_OF_TIMES_TIMED_OUT_KEY
+  int64 inactive_end_time = 5; //ACCOUNT_INACTIVE_END_TIME_KEY (in millis)
+
+  repeated UserDisciplinaryAction disciplinary_actions = 6; //ACCOUNT_DISCIPLINARY_RECORD_KEY
+
+  int64 last_time_account_verified = 7; //ACCOUNT_LAST_VERIFIED_TIME_KEY
+  int64 time_account_created = 8; //ACCOUNT_TIME_CREATED_KEY
+
+  string account_oid = 9; //account OID
+  string phone_number = 10; //ACCOUNT_PHONE_NUMBER_KEY
+  string user_name = 11; //ACCOUNT_FIRST_NAME_KEY
+
+  string gender = 12;
+  BirthdayMessage birthday_info = 13;
+  EmailMessage email_info = 14;
+
+  int32 algorithm_search_options = 15; //follows AlgorithmSearchOptions, however that is not inside the same folder so uses an int
+
+  repeated CategoryActivityMessage categories_array = 16;
+
+  PostLoginMessage post_login_info = 17;
+
+  LocationMessage location = 18; //the most recent location of the user
+  int64 timestamp_find_matches_last_ran = 19; //the timestamp in ms that find_matches was last run
+
+  repeated PictureMessageResult picture_list = 20;
+
+  int32 number_of_other_users_blocked = 21; //size of ACCOUNT_OTHER_USERS_BLOCKED
+
+  int32 number_of_times_swiped_yes = 22; //ACCOUNT_NUMBER_TIMES_SWIPED_YES_KEY
+  int32 number_of_times_swiped_no = 23; //ACCOUNT_NUMBER_TIMES_SWIPED_NO_KEY
+  int32 number_of_times_swiped_block_report = 24; //ACCOUNT_NUMBER_TIMES_SWIPED_BLOCK_KEY & ACCOUNT_NUMBER_TIMES_SWIPED_REPORT_KEY
+  int32 number_of_times_others_swiped_yes_on = 25; //ACCOUNT_NUMBER_TIMES_OTHERS_SWIPED_YES_KEY
+  int32 number_of_times_others_swiped_no_on = 26; //ACCOUNT_NUMBER_TIMES_OTHERS_SWIPED_NO_KEY
+  int32 number_of_times_others_swiped_block_report = 27; //ACCOUNT_NUMBER_TIMES_OTHERS_SWIPED_BLOCK_KEY & ACCOUNT_NUMBER_TIMES_OTHERS_SWIPED_REPORT_KEY
+  int32 number_of_times_sent_activity_suggestion = 28; //ACCOUNT_NUMBER_TIMES_SENT_ACTIVITY_SUGGESTION_KEY
+  int32 number_of_times_sent_bug_report = 29; //ACCOUNT_NUMBER_TIMES_SENT_BUG_REPORT_KEY
+  int32 number_of_times_sent_other_suggestion = 30; //ACCOUNT_NUMBER_TIMES_SENT_OTHER_SUGGESTION_KEY
+
+  int32 number_of_times_spam_feedback_sent = 31; //ACCOUNT_NUMBER_TIMES_SPAM_FEEDBACK_SENT_KEY
+  int32 number_of_times_spam_reports_sent = 32; //ACCOUNT_NUMBER_TIMES_SPAM_REPORTS_SENT_KEY
+
+  int32 number_of_times_blocked_reported_by_others_in_chat_room = 33; //ACCOUNT_NUMBER_TIMES_REPORTED_BY_OTHERS_IN_CHAT_ROOM & ACCOUNT_NUMBER_TIMES_BLOCKED_BY_OTHERS_IN_CHAT_ROOM
+  int32 number_of_times_this_user_blocked_reported_from_chat_room = 34; //ACCOUNT_NUMBER_TIMES_THIS_USER_REPORTED_FROM_CHAT_ROOM & ACCOUNT_NUMBER_TIMES_THIS_USER_BLOCKED_FROM_CHAT_ROOM
+
+  int64 timestamp_user_returned = 35;
+
+  int64 last_time_displayed_info_updated = 36;
+
+  bool opted_in_to_promotional_email = 37;
+
+  UserSubscriptionStatus subscription_status = 38;
+
+  int64 subscription_expiration_time_ms = 39;
+
+  UserAccountType account_type = 40;
+
+  EventValues event_values = 41;
+
+  int64 event_expiration_time_ms = 42;
+
+  repeated UserCreatedEvent user_created_events = 43;
+
+}
+
+message RequestUserAccountInfoResponse {
+  bool success = 1;
+
+  //set if success == false
+  string error_msg = 2;
+
+  //set if success == true
+  CompleteUserAccountInfo user_account_info = 3;
+}
+
+service RequestUserAccountInfoService {
+  rpc RequestUserAccountInfoRPC(RequestUserAccountInfoRequest) returns (RequestUserAccountInfoResponse) {}
+}

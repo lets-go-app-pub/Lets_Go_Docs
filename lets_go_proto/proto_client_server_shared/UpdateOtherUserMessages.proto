@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+option java_package = "update_other_user_messages";
+
+import "MemberSharedInfoMessage.proto";
+import "StatusEnum.proto";
+import "AccountState.proto";
+import "LetsGoEventStatus.proto";
+
+message UpdateOtherUserResponse {
+
+  //NOTE: this divides the things the client needs into 3 parts
+  //1) account info (everything inside of MemberSharedInfoMessage except the picture list and thumbnail)
+  //2) pictures, (picture list and thumbnail inside MemberSharedInfoMessage)
+  //3) account state
+  //when pictures are returned check and see if thumbnail has been set to anything other than "", if it has it has been updated
+  //each of these values has a bool that will be set if it needs updated
+  //this message will ONLY be sent if a member requires updating, if no message is sent, no member will require updating
+
+  ReturnStatus return_status = 1; //return status
+
+  //NOTE: only the pictures requiring an update will be passed back (with their respective index numbers)
+  MemberSharedInfoMessage user_info = 2;
+
+  int64 timestamp_returned = 3;
+
+  //only relevant when requesting for a chat room member update
+  AccountStateInChatRoom account_state = 4;
+
+  //only relevant when requesting for a match member update AND when return_status==SUCCESS
+  bool match_still_valid = 5;
+
+  int64 account_last_activity_time = 6; //time this member was last active in the chat room (in milliseconds)
+
+  //this will be set to true if this user was updated in any way (account state, thumbnail, first name, pictures) false otherwise
+  //it is used for other users and NOT the calling user
+  //NOTE: not using this variable (it is no longer implemented)
+  // UpdateSingleChatRoomMemberRPC will always require the client to update the picturesUpdateAttemptedTimestamp
+  // UpdateChatRoomRPC will only send back members that require updates, so the variable is redundant
+  //bool user_was_updated_in_some_way = 7;
+}
+
+message OtherUserInfoForUpdates {
+
+  string account_oid = 1;
+  AccountStateInChatRoom account_state = 2;
+
+  //these 3 will only be set to check info if the account state does not represent 'in the chat room'
+  int32 thumbnail_size_in_bytes = 3;
+  int32 thumbnail_index_number = 4;
+  int64 thumbnail_timestamp = 5;
+
+  string first_name = 6;
+
+  int32 age = 7; //there is no timestamp for age so passing it directly
+
+  int64 member_info_last_updated_timestamp = 8; //last time the member info besides the pictures was updated
+  repeated PictureIndexInfo pictures_last_updated_timestamps = 9;
+
+  //Event specific values
+  LetsGoEventStatus event_status = 10; //should be set to NOT_AN_EVENT if not an event
+  string event_title = 11; //can be left empty if not an event
+}
+
+message PictureIndexInfo {
+  int32 index_number = 1; //index number of picture
+  int64 last_updated_timestamp = 2; //timestamp picture was last updated
+}

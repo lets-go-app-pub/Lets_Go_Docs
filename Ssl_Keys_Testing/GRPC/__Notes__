@@ -1,0 +1,65 @@
+TLDR: Decided to use an RSA key with key length of 2048 bits. Also puting a copy of the public key on Android and the Desktop Interface.
+-Common Names: LetsGo, 0.0.0.0, localhost, may need to add at least 1 more so the C++ client can connect to a DNS for the live server
+
+On mobile devices the recomendation seems to be that elliptical curve algorithms are over typical RSA algorithms. Apparently they are faster (haven't seen any proof of this).
+
+In looking into the different key types a few came up as noteworthy.
+secp256r1 (also called prime256v1)
+secp256k1 (bitcoin's key algorithm)
+x25519
+x448
+A big part of these recomendations (not completely) are from
+https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-8
+These curves are also relatively small (larger curves should not be needed because no true personal info is collected). Which will allow them to be more performant.
+ 
+
+Going through each of these they all have problems.
+
+secp256r1
+This curve seems to be fully supported however it has a backdoor built into it by the NSA.
+
+secp256k1
+This curve does not work with grpc, even between C++ server and C++ client, it has the error
+-Handshake failed with fatal error SSL_ERROR_SSL: error:1417A0C1:SSL routines:tls_post_process_client_hello:no shared cipher.
+
+x25519 & x448
+These curves are technically supported by grpc (and would be a nice choice). However, there are two problems.
+1) In order for the C++ server to process them, the grpc that the server uses must be built using openSsl, NOT boringSsl which is default (see below for command) if not it will show the error
+-E0524 09:24:31.816683842   48699 ssl_transport_security.cc:1495] Handshake failed with fatal error SSL_ERROR_SSL: error:100000fd:SSL routines:OPENSSL_internal:NO_COMMON_SIGNATURE_ALGORITHMS.
+2) After grpc is built with openSsl, it will work between the C++ client and the C++ server. However, when an attempt is made between Android and the C++ server it will show the error
+-Handshake failed with fatal error SSL_ERROR_SSL: error:1417A0C1:SSL routines:tls_post_process_client_hello:no shared cipher.
+There does not seem to be any way to build grpc-java with openSsl in the way that C++ allows.
+
+
+
+
+Also it should be pointed out that while the server has several options on how to handle client certificates.
+-GRPC_SSL_DONT_REQUEST_CLIENT_CERTIFICATE
+-GRPC_SSL_REQUEST_CLIENT_CERTIFICATE_BUT_DONT_VERIFY
+-GRPC_SSL_REQUEST_CLIENT_CERTIFICATE_AND_VERIFY
+-GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_BUT_DONT_VERIFY
+-GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_AND_VERIFY
+None of these (not even the first one) seems to allow NO client certificate to be used. This was true on both the C++ and Java clients. It is most likely a bug considering the C++ client is actually somewhat of a poster child for no certificate
+https://grpc.io/docs/guides/auth/
+This means a certificate must be used on the Android client.
+
+
+
+
+Command to build grpc C++ with OpenSSL 
+
+cmake -DgRPC_INSTALL=ON \
+      -DgRPC_BUILD_TESTS=OFF \
+      -DgRPC_SSL_PROVIDER=OpenSSL \
+      -DCMAKE_INSTALL_PREFIX=../../.. \
+      ../..
+
+The rest of the installation process can be found at
+https://grpc.io/docs/languages/cpp/quickstart/
+
+
+A .pem file can contain several things. The x509 .pem files that are used for the mongoDB replica set members contain both the public and private key. However, the .pem file here only contains the public cert OR private key. This means it can be used inside public sources such as on Android (which it is).
+-https://stackoverflow.com/questions/41460230/how-do-i-identify-if-my-certificate-contains-private-key
+
+
+

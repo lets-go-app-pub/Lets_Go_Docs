@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+option java_package = "report_enums";
+
+import "StatusEnum.proto";
+import "LoginToServerBasicInfo.proto";
+
+enum ResponseType {
+  USER_MATCH_OPTION_CONNECTION_ERR = 0; //this is the default value and should only be set if a failure in gRPC occurred
+  USER_MATCH_OPTION_YES = 1; //this is used for 1; it never needs to be called by anything, it is for server side processing
+  USER_MATCH_OPTION_NO = 2; //this is the basic type when user swipes no
+  USER_MATCH_OPTION_BLOCK = 3; //this means the user chose to block the match from occurring in their feed
+  USER_MATCH_OPTION_REPORT = 4; //this means the user wants to report the user
+}
+
+enum ReportReason {
+  REPORT_REASON_UNKNOWN_DEFAULT = 0; //this is the default value and should only be set if a failure in gRPC occurred
+  REPORT_REASON_OTHER = 1; //a report for 'other'
+  REPORT_REASON_LANGUAGE = 2; //a report for 'language'
+  REPORT_REASON_INAPPROPRIATE_PICTURE = 3; //a report for the match picture being inappropriate
+  REPORT_REASON_ADVERTISING = 4; //a report for the match picture being advertising
+}
+
+enum ReportOriginType {
+  REPORT_ORIGIN_SWIPING = 0;
+  REPORT_ORIGIN_CHAT_ROOM_INFO = 1;
+  REPORT_ORIGIN_CHAT_ROOM_MEMBER = 2;
+  REPORT_ORIGIN_CHAT_ROOM_MESSAGE = 3;
+  REPORT_ORIGIN_CHAT_ROOM_MATCH_MADE = 4;
+}
+
+//Is used in Yes, No, Block and Report messages
+message UserMatchOptionsRequest {
+  LoginToServerBasicInfo login_info = 1;
+
+  string match_account_id = 2; //the matching account oid
+  ResponseType response_type = 3; //used with No, Block and Report, can be ignored when using Yes
+  ReportReason report_reason = 4; //used with Report response
+
+  //will store the other reason if ReportReason == REPORT_REASON_OTHER
+  //used with ResponseType == USER_MATCH_OPTION_REPORT
+  string other_info = 5; //other info used for message,
+
+  //can store the message UUID if this was sent in relation to a specific message
+  //used with ResponseType == USER_MATCH_OPTION_REPORT
+  string chat_room_id = 6; //other info used for message,
+  string message_UUID = 7;
+
+  //will store the location the report originated from
+  //used with ResponseType == USER_MATCH_OPTION_REPORT
+  ReportOriginType report_origin = 8;
+}
+
+//this could be split into several responses but tinder got in trouble for yes and no being different sizes
+message UserMatchOptionsResponse {
+  ReturnStatus return_status = 1; //enum for status of response
+  int64 timestamp = 2; //NOTE: may not be set
+}

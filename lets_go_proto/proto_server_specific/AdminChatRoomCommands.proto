@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+import "LoginToServerBasicInfo.proto";
+import "ChatMessageToClientMessage.proto";
+
+option java_multiple_files = true;
+
+package admin_chat_commands;
+
+message GetSingleMessageRequest {
+  LoginToServerBasicInfo login_info = 1;
+
+  string chat_room_id = 2;
+  string message_uuid = 3;
+
+  //used to get the message before any edits
+  int64 timestamp_of_message = 4;
+}
+
+message GetSingleMessageResponse {
+  //true if was successfully updated
+  bool successful = 1;
+
+  //set if successful == false
+  string error_message = 2;
+
+  //set if successful == true
+  ChatMessageToClient message = 3;
+}
+
+service AdminChatRoomCommandsService {
+  rpc GetSingleMessageRPC(GetSingleMessageRequest) returns (GetSingleMessageResponse) {}
+}

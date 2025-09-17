@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package manage_server_commands;
+
+import "LoginToServerBasicInfo.proto";
+
+message RequestServerShutdownRequest {
+  LoginToServerBasicInfo login_info = 1;
+
+  string server_address = 2;
+}
+
+message RequestServerShutdownResponse {
+  bool successful = 1;
+
+  //only used if success == false
+  string error_message = 2;
+}
+
+service ManageServerCommandsService {
+  rpc RequestServerShutdownRPC(RequestServerShutdownRequest) returns (RequestServerShutdownResponse) {}
+}

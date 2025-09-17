@@ -1,0 +1,1100 @@
+Considerations
+
+What is the limiting factor that I need to look out for? (RAM, Bandwidth, Processing, etc...)
+Should I get multiple servers from different sites?
+
+3 MongoDB Database Servers (all part of a replica set).
+2 Client Interface Servers (they run the c++ server program).
+
+
+
+***POINTS FOR CONSIDERATION***
+
+MongoDB requires 2 cores, x86 archetecture is good
+Make sure to get SSD using RAID-10
+Should have at least 1 GB of RAM
+Check where the data centers are located (US Central is ideal)
+The 'Virtual Machine' must be KVM, OpenVZ does not allow low enough access for mongoDB (such as setting vm.swappiness, vm.max_map_count and XFS file systems).
+Need rescue mode or equivalent to handle partitions.
+
+Interserver (was full, no KVM servers available in US west)
+Hostwinds 
+DigitalOcean (good documentation)
+Linode (only does linux servers, Freemount is closest, set the priority of database to 0.5)
+
+Ubuntu vs REHL(For Databases)
+-Ubuntu doesn't use XFS, might be able to change partitioning but all providers may not give a way to do this.
+-Have Ubuntu installed for development, so can upload things written on Ubuntu (probably doesn't matter).
+-CentOS which was the primary REHL distro is going to be obsolete 'soon' (June 30, 2024; CentOS 7).
+
+REHL
+-XFS file system is good for mongoDB performance
+Ubuntu
+-actually supported
+-available everywhere
+-familiarity
+
+Using VPS from multiple companies 
+-PROS
+--Will give me a broader view of how these companies operate.
+--Might make downtime across different VPS shorter. (can all of them go out at the same time)
+-CONS
+--Need to keep track of multiple companies login info and other things. Can't simply use one account.
+--Need to learn multiple companies consoles.
+--Can't simply pick the fastest one (a2Hosting I think is the best fit).
+--Might be harder to negotiate with any single company. But also harder to be taken advantage of by a single company.
+
+
+
+***REFERENCES***
+
+Secure a server with iptables (written for centOS but works for ubuntu too)
+https://blacksaildivision.com/secure-iptables-rules-centos
+
+Setting up SSL/TLS between replica set members and for clients (used x.509 authenication not just SSL).
+-This one goes over the basics (worth a read to brush up). Very old.
+--http://www.allanbank.com/blog/security/tls/x.509/2014/10/13/tls-x509-and-mongodb/
+-An example, the best example I have found, some of the options ended different under 'v3_req'. Also, use IP.x instead of DNS.x.
+--https://www.bustedware.com/blog/mongodb-ssl-tls-x509-authentication
+-MongoDB example from their blog. Very old.
+--https://www.mongodb.com/blog/post/secure-mongodb-with-x-509-authentication
+-MongoDB example of setting up certificates (for testing). There are other appendix with it on the left bar.
+--https://www.mongodb.com/docs/manual/appendix/security/appendixA-openssl-ca/
+
+Securing a linux machine checklist
+https://www.sbarjatiya.com/notes_wiki/index.php/CentOS_8.x_Securing_a_Linux_machine
+
+How to disable ipv6 in ubuntu
+https://itsfoss.com/disable-ipv6-ubuntu-linux/
+
+Using Keys Instead of passwords
+https://www.a2hosting.com/kb/getting-started-guide/accessing-your-account/using-ssh-keys
+
+Some cheap KVM VPS
+https://www.hostingsprout.com/cheap-kvm-vps/
+
+Change a partition scheme VPS
+https://linuxhandbook.com/change-partition-scheme-vps-server/
+
+Setup encrypted filesystem
+https://www.digitalocean.com/community/tutorials/how-to-create-an-encrypted-file-system-on-a-digitalocean-block-storage-volume
+
+Checklists and notes for mongodb deployments
+https://www.mongodb.com/docs/manual/administration/
+
+
+
+
+***UPGRADING A DATABASE SERVER TO MORE STORAGE***
+
+
+NOTE: The new storage space is added at the end. Need to add it to the XFS partition (the partition mongoDB stores files in).
+
+
+RESIZE XFS Partition
+-https://help.ubuntu.com/community/ResizeEncryptedPartitions
+-there may be a way to do this w/o resizing, see below for how paritions were made
+-on Linode storage and partitions work a bit differently
+--https://www.linode.com/community/questions/281/using-different-filesystem-types-on-a-linode
+
+
+RESIZE XFS Partition (OBSOLETE THIS WILL NOT WORK WITH ENCRYPTED PARTITIONS)
+-may need to install parted
+--$ sudo apt install parted
+-make sure mongodb is not running
+--$ sudo systemctl stop mongod
+-unmount the partition
+--$ sudo umount /dev/<partition name(sda3)>
+-$ sudo parted /dev/<drive name(sda)>
+-$ unit s
+-$ print free
+-$ resizepart
+-$ <partition number(xfs partition 3 in practice)>
+-$ <end(the 'End' of the Free Space shown from the print free command above)>
+-Ctrl+C to exit parted
+-assuming the letsgodatabase__ user is calling this, otherwise path for mount command needs changed
+--$ sudo mount /dev/<partition name(sda3)> /mnt/secure_xfs_mongodb/
+-expand partition for system
+--$ sudo xfs_growfs /dev/<partition name(sda3)>
+--NOTE: An xfs filesystem cannot be shrunk, it can only grow.
+
+
+
+***CHANGING A SERVER IP ADDRESS (MONGODB OR CLIENT INTERFACE)***
+
+
+UPDATE files
+-If client interface server, change for GRPC_SERVER_ADDRESSES_URI variable inside the c++ program.
+-If client interface server, change CURRENT_SERVER_IP_ADDRESS_LETS_GO environment variable inside /etc/systemd/system/clientInterface.service (only relevant for the specific server being changed).
+-The iptables_ipv4_rules file under 'MongoDB Ips' Or 'Server Ips'.
+-/etc/iptables/rules.v4 files will need the same changes (should only be relevant to mongodb servers, not client interface servers).
+-/etc/hosts files will need updated (mongodb servers, client interfaces, personal computers, also update /etc/hosts in the instructions below to contain new ip).
+
+
+
+***CHANGING WEB SERVER IP ADDRESS***
+
+
+UPDATE files
+-The iptables_ipv4_rules file under 'Server Ips'.
+-/etc/iptables/rules.v4 files will need the same changes (should only be relevant to mongodb servers, not client interface servers).
+
+
+
+***ADDING A NEW SERVER (MONGODB OR CLIENT INTERFACE)***
+
+
+UPDATES
+-If client interface server, add to GRPC_SERVER_ADDRESSES_URI variable inside the c++ server.
+-Add the new ip iptables_ipv4_rules file under 'MongoDB Ips' Or 'Server Ips'.
+-/etc/iptables/rules.v4 files will need the same changes (should only be relevant to mongodb servers, not client interface servers).
+-Add the new ip to /etc/hosts files (mongodb servers, client interfaces, personal computers too).
+-Setup server according to below instructions (also update /etc/hosts in the instructions below to contain new ip).
+
+
+ADD (only relevant for mongodb servers)
+-Replica sets have a standard method to add them to the replica set through the shell. Look at mongodb docs.
+
+
+
+***SERVER SETUP***
+
+
+INSTALL Ubuntu 20
+-Mongodb atm isn't supported on Ubuntu 22 (can use 22 later if it is updated)
+--NOTE: Mongodb must be install on client-interface servers for the driver. Will get the following error on Ubuntu 22.
+---The following packages have unmet dependencies:
+----mongodb-org-mongos : Depends: libssl1.1 (>= 1.1.1) but it is not installable
+----mongodb-org-server : Depends: libssl1.1 (>= 1.1.1) but it is not installable
+-https://www.mongodb.com/docs/manual/administration/production-notes/
+
+
+MAKE sure the server virtualization is kvm
+-$ hostnamectl
+-Virtualization should be 'kvm'
+
+
+SETTING UP XFS PARTITION (Only for MongoDB Servers)
+-Memory allocation
+--20G of memory for standard filesystem
+--4G of the 20G will become swap space
+--all memory outside the 20G will become an xfs filesystem type partition
+-follow general procedure below (will need to change numbers and set xfs filesystem instead of ext)
+--may need $ sudo apt-get install xfsprogs
+--https://linuxhandbook.com/change-partition-scheme-vps-server/
+-some commands
+--check partitions and filesystem types
+---$ lsblk -f
+--mount
+---$ sudo mount /dev/sda3 /mnt/secure_xfs_mongodb/
+--unmount
+---$ sudo umount /dev/sda3
+-check the fstype and partitions
+--$ lsblk -f
+
+
+ADD encryption to xfs partition
+-Only need this step if mongoDB Server
+-https://www.digitalocean.com/community/tutorials/how-to-create-an-encrypted-file-system-on-a-digitalocean-block-storage-volume
+-$ sudo apt install cryptsetup-bin
+-$ sudo umount -l /dev/sda3
+-$ sudo cryptsetup -y -v luksFormat /dev/sda3
+-enter passphrase (Stored in file Secure_Accounts_And_Passwords.txt under 'Database Encrypted Filesystem Info')
+-$ sudo cryptsetup luksOpen /dev/sda3 database_filesystem
+-$ sudo cryptsetup status database_filesystem
+--make sure the encryption worked
+-$ sudo mkfs.xfs /dev/mapper/database_filesystem
+-$ sudo mkdir /mnt/secure_xfs_mongodb/
+-$ sudo dd if=/dev/urandom of=/root/.secure-key  bs=1024 count=4
+-$ sudo chmod 0400 /root/.secure-key
+-$ cryptsetup luksAddKey /dev/sda3 /root/.secure-key
+--this key will be used below inside /etc/crypttab
+
+
+REMOVE encryption from xfs partition (REQUIRES FORMATING THE PARTITION)
+-DO NOT DO THIS FOR SERVER SETUP, HERE FOR DOCUMENTATION PURPOSES ONLY, REVERSES ABOVE ADD
+-$ sudo umount -l /dev/mapper/dm-sda3
+-$ sudo cryptsetup luksClose /dev/mapper/dm-sda3
+-$ sudo mkfs.xfs /dev/sda3 (NOTE THIS WILL FORMAT THE PARTITION)
+-$ sudo mount /dev/sda3 /mnt/secure_xfs_mongodb/
+
+
+EDIT /etc/fstab 
+-make sure the swapfile line isn't already in there
+-only add the /mnt/secure_xfs_mongodb/ line if this is a mongodb server
+-could use $ sudo blkid to get uuid 
+#device                                         mountpoint                  fstype  options                  dump fsck
+
+/swapfile                                        none                       swap    sw                        0    0
+/dev/mapper/database_filesystem                 /mnt/secure_xfs_mongodb/    xfs     defaults,nofail,noatime   0    2
+
+
+EDIT /etc/crypttab
+-this step is only relevant if this is a mongodb server
+#device_name          device_path     key_path          options
+database_filesystem    /dev/sda3    /root/.secure-key     luks
+
+
+UPGRADE and install man
+-$ sudo apt update
+-$ sudo apt upgrade
+-$ sudo apt-get install man
+
+
+SETUP SWAP SPACE
+Want a total of 4G for now
+-https://www.digitalocean.com/community/tutorials/how-to-add-swap-space-on-ubuntu-20-04
+
+
+CREATE a new user as part of the sudo group and connect as this user
+-user: letsgodatabase__ OR clientinterface__
+-$ adduser letsgodatabase__
+-$ addgroup letsgodatabase__ sudo
+
+
+CHANGE port from default 22 to 7828
+-$ sudo vim /etc/ssh/sshd_config
+-NOTE: if no port is selected, it will default to 22, uncomment/add 'Port 22' in this case
+-add a Port 7828 below the Port 22 
+-save the file
+-$ sudo systemctl restart sshd
+-connect to ssh over new port
+-$ sudo vim /etc/ssh/sshd_config
+-comment out the Port 22 (#Port 22)
+-save the file
+-$ sudo systemctl restart sshd
+
+
+FIREWALL (iptables)
+-$ sudo apt-get install iptables
+-$ sudo apt-get install iptables-persistent
+-setup ipv4 rules 
+--copy contents of iptables_ipv4_rules to /etc/iptables/rules.v4
+--if mongodb server then uncomment the mongodb port rules and set them up for
+---The other members of the replica set
+---Any clients that will connect
+--if client interface server then uncomment the grpc port rules and the outgoing mongodb port rules
+-setup ipv6 rules 
+--copy contents of iptables_ipv6_rules to /etc/iptables/rules.v6
+
+
+DISABLE IPV6
+-https://itsfoss.com/disable-ipv6-ubuntu-linux/
+-there is a section at the end to add if the settings don't stick
+
+
+DISABLE root SSH access
+-$ sudo vim /etc/ssh/sshd_config
+--PerminRootLogin no
+--AllowUsers letsgodatabase__
+-$ sudo service ssh restart
+-open the other user in another terminal to make sure it works w/o getting locked out of ssh AND sudo su works
+
+
+NOTE: Not forcing (or enabling) key access yet. Only have one computer accessing and if I lose the key, the servers will need formatted in order to access them.
+
+
+INSTALL Fail2ban
+-$ sudo apt-get install fail2ban
+-$ sudo cp /etc/fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.local
+-$ sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+-make sure systemd is installed
+--$ [[ -d /run/systemd/system ]] && echo "using systemd" 
+---will return "using systemd" if installed
+--if NOT installed and python
+---$ sudo apt install python-systemd
+--if NOT installed and python3
+---$ sudo apt install python3-systemd
+-inside /etc/fail2ban/jail.local
+--add 'enabled = true' under the JAILS->[sshd]
+--may need to change 'backend = systemd' under the JAILS->[sshd] if fail2Ban has 0 jails running or won't start
+--inside (settings) remove the comment on ignoreip, AND should add my ip to [DEFAULT]->ignoreip section, but my ip is dynamic atm
+-$ sudo fail2ban-client status
+--make sure sshd is on the jail list when running
+---if NOT started can get an error msg with $ sudo fail2ban-client -x start
+---may also need to change 'backend = systemd' under sshd if error msg is 'ERROR   Failed during configuration: Have not found any log file for sshd jail'
+-$ sudo service fail2ban restart
+--if fail2ban does not start on reboot, may need to use below command (enter user passwords if prompted)
+---$ sudo systemctl enable fail2ban
+
+
+REMOVE Apache
+-$ sudo service apache2 stop
+-$ sudo apt-get remove apache2
+-$ sudo apt autoremove
+-$ sudo apt remove apache2.*
+-$ sudo apt-get purge apache2*
+
+
+ADD logical DNS to 
+-$ sudo vim /etc/hosts
+# The current logical DNS name cannot be added for client interface servers. If it is, the grpc server will resolve the DNS passed in as 127.0.0.1.
+127.0.0.1       localhost         <current logical DNS name (ONLY for mongoDB database servers)>
+{redacted}  hostwinds.replset.member
+{redacted} digitalocean.replset.member
+{redacted} linode.replset.member
+
+
+RESTART the server
+
+
+CHECK on restart
+-free -h
+--should have 4GB of swap space
+-$ sudo fail2ban-client status
+--should be running and have sshd jail running
+-$ sudo iptables -S
+--should be set up
+-$ sudo ip6tables -S
+--should be set up
+-$ ip a
+--there should be no ipv6 addresses here (disabled)
+-make sure cannot connect as root
+-xfs file system should be mounted at /mnt/secure_xfs_mongodb/ (if mongodb server)
+--$ df -h
+
+
+
+**CLIENT INTERFACE SPECIFIC SERVER SETUP**
+
+
+MAKE sure connections are available
+-NOTE: kernel.pid_max matches the systemd service parameter 'TasksMax'.
+-https://stackoverflow.com/questions/410616/increasing-the-maximum-number-of-tcp-ip-connections-in-linux
+-$ sysctl net.core.somaxconn
+--is at least 1024
+-$ sysctl net.core.netdev_max_backlog
+--is at least 2000
+-$ sysctl net.ipv4.tcp_max_syn_backlog
+--is at least 2048
+-ONLY COPY THE VALUES IF THEY NEED CHANGED
+-$ sudo vim /etc/sysctl.conf
+#net.core.somaxconn=1024
+net.core.netdev_max_backlog=2000
+net.ipv4.tcp_max_syn_backlog=2048
+net.ipv4.tcp_tw_reuse=1
+vm.swappiness=10
+vm.vfs_cache_pressure=50
+fs.file-max=98000
+kernel.pid_max=64000
+kernel.threads-max=64000
+
+
+FIX ULIMIT SETTINGS
+-NOTE: The ulimits are also changed for the client interface when starting the service. Look below under client interface for the [Service] and update them if these are updated.
+-copy contents of limits_conf to end of /etc/security/limits.conf
+-$ sudo vim /etc/pam.d/common-session
+-add the below lines to end of file
+# make the ulimits values inside /etc/security/limits.conf take effect
+session required        pam_limits.so
+
+
+NOTES before installing MongoDB
+-Verify latest stable release is installed with package manager https://www.mongodb.com/try/download/community
+
+
+MAKE sure C is installed
+-$ sudo apt-get install libc6
+
+
+INSTALL mongoDB https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-ubuntu/
+-$ wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
+-$ echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+-$ sudo apt-get update
+-$ sudo apt-get install -y mongodb-org
+
+
+RESTART the server.
+-somaxconn
+--$ sysctl net.core.somaxconn
+---is at least 1024
+-netdev_max_backlog
+--$ sysctl net.core.netdev_max_backlog
+---is at least 2000
+-tcp_max_syn_backlog
+--$ sysctl net.ipv4.tcp_max_syn_backlog
+---is at least 2048
+-tcp_tw_reuse
+--$ sysctl net.ipv4.tcp_tw_reuse
+---is 1
+-swappiness
+--$ cat /proc/sys/vm/swappiness
+---10
+-vfs_cache_pressure
+--$ cat /proc/sys/vm/vfs_cache_pressure
+---50
+-fs.file-max
+--$ /sbin/sysctl fs.file-max
+---98000
+-kernel.pid_max
+--$ cat /proc/sys/kernel/pid_max
+---64000
+-kernel.threads-max
+--$ cat /proc/sys/kernel/threads-max
+---64000
+-compare ulimit settings to limits_conf contents
+--$ ulimit -a
+-make sure mongoDB is NOT running
+--$ sudo systemctl status mongod
+
+
+-make a clientInterface directory inside ~
+--$ mkdir ~/clientInterface
+--$ mkdir ~/clientInterface/Deployment
+--$ mkdir ~/clientInterface/Logging
+--$ mkdir ~/dependencyBuilds
+-install python3 (specifically need python-dev for Python.h)
+--$ sudo apt-get install python3.8 python3.8-dev
+-install openssl
+--$ sudo apt-get install libssl-dev
+-install git
+--$ sudo apt-get install git-all
+-Get gcc version 11 or whatever version the client uses (c++20 Coroutines must work)
+--https://askubuntu.com/questions/466651/how-do-i-use-the-latest-gcc-on-ubuntu	
+--$ sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+--$ sudo apt-get update
+--$ sudo apt-get install -y gcc-11 g++-11
+--$ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 60 --slave /usr/bin/g++ g++ /usr/bin/g++-11
+--$ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 60 --slave /usr/bin/g++ g++ /usr/bin/g++-9
+-install CMake (make sure to use the developer section in the post below)
+--$ cd ~/dependencyBuilds
+--https://askubuntu.com/questions/355565/how-do-i-install-the-latest-version-of-cmake-from-the-command-line
+-Install tbb
+--$ sudo apt install libtbb-dev
+-Install libmongoc
+--$ cd ~/dependencyBuilds
+--$ sudo apt-get install cmake libssl-dev libsasl2-dev
+--$ wget https://github.com/mongodb/mongo-c-driver/releases/download/1.23.2/mongo-c-driver-1.23.2.tar.gz
+--$ tar xzf mongo-c-driver-1.23.2.tar.gz
+--$ cd mongo-c-driver-1.23.2
+--$ mkdir cmake-build
+--$ cd cmake-build
+--$ cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF DCMAKE_BUILD_TYPE=Release ..
+--$ cmake --build .
+--$ sudo cmake --build . --target install
+-Install mongocxx
+--$ cd ~/dependencyBuilds
+--$ curl -OL https://github.com/mongodb/mongo-cxx-driver/releases/download/r3.7.0/mongo-cxx-driver-r3.7.0.tar.gz
+--$ tar -xzf mongo-cxx-driver-r3.7.0.tar.gz
+--$ cd mongo-cxx-driver-r3.7.0/build
+--$ cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
+--$ sudo cmake --build . --target EP_mnmlstc_core
+--$ cmake --build .
+--$ sudo cmake --build . --target install
+-Install Boost
+--$ cd ~/dependencyBuilds
+--$ wget -O boost_1_80_0.tar.gz https://sourceforge.net/projects/boost/files/boost/1.80.0/boost_1_80_0.tar.gz/download
+--$ tar -xzvf boost_1_80_0.tar.gz
+--$ cd boost_1_80_0/
+--$ sudo apt-get install build-essential g++ python-dev autotools-dev libicu-dev libbz2-dev
+--$ ./bootstrap.sh --prefix=/usr/
+--$ ./b2
+--$ sudo ./b2 install
+-Install grpc (local install can remove it anytime)
+--$ mkdir ~/dependencyBuilds/grpc_1_50_1
+--$ cd ~/dependencyBuilds/grpc_1_50_1
+--$ git clone --recursive -b v1.50.1 https://github.com/grpc/grpc
+--$ cd grpc
+--$ git submodule update --init
+--$ mkdir -p cmake/build
+--$ pushd cmake/build
+--$ cmake -DgRPC_INSTALL=ON \
+	  -DgRPC_BUILD_TESTS=ON \
+      -DCMAKE_INSTALL_PREFIX=../../.. \
+      ../..
+--$ make -j 1
+--$ make install
+--$ popd
+-Protobuf (https://grpc.io/docs/protoc-installation/)
+--$ mkdir ~/dependencyBuilds/protoc_3_20_3
+--$ cd ~/dependencyBuilds/protoc_3_20_3
+--$ curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.20.3/protoc-3.20.3-linux-x86_64.zip
+--$ unzip protoc-3.20.3-linux-x86_64.zip -d ./unzip
+--$ export PATH="$PATH:$HOME/dependencyBuilds/protoc_3_20_3/unzip/bin"
+--$ sudo vim /etc/environment
+--update path variable (add the below line at the end of the PATH)
+--*** CHANGE __ IN BELOW PATH ***
+---:/home/clientinterface__/dependencyBuilds/protoc_3_20_3/unzip/bin
+-twilil-cli
+--https://www.twilio.com/docs/sms/quickstart/python
+--$ cd ~/dependencyBuilds
+--$ wget -qO- https://twilio-cli-prod.s3.amazonaws.com/twilio_pub.asc | sudo apt-key add -
+--$ sudo touch /etc/apt/sources.list.d/twilio.list
+--$ echo 'deb https://twilio-cli-prod.s3.amazonaws.com/apt/ /' | sudo tee /etc/apt/sources.list.d/twilio.list
+--$ sudo apt update
+--$ sudo apt install -y twilio
+--connect twilio account
+---$ twilio login
+----enter SID from twilio account
+----enter Auth Token from twilio account
+----enter Shorthand: LetsGoTwilio
+---$ twilio profiles:use LetsGoTwilio
+-pip
+--$ sudo apt install python3-pip
+-Twilio python server-side sdk (install as local, the service will include it above as part of PYTHONPATH variable)
+--$ pip3 install twilio
+-Send Grid Python
+--https://github.com/sendgrid/sendgrid-python
+--$ pip3 install sendgrid
+-ReadMe
+--$ vim ~/dependencyBuilds/ReadMe.txt
+--paste below inside
+This folder contains builds for various applications and libraries. Some of them are kept around because the folder is directly include (such as grpc). Others are kept because the folder contains an uninstall feature inside (such as libmongoc and mongocxx). The idea is to group all dependencies into this folder.
+
+
+For more info on what options were used see the Server_Setup.txt file.
+-Upgrade the system
+--$ sudo apt update
+--$ sudo apt upgrade
+
+
+MOVE SSL Keys to client interface (from desktop)
+$cd /home/jeremiah/Documents/Lets_Go_Docs/Ssl_Key/GRPC
+scp -P 7828 grpc_private_key.key grpc_public_cert.pem clientinterfacehw@letsgoclientinterfacehw.com:/home/clientinterfacehw
+scp -P 7828 grpc_private_key.key grpc_public_cert.pem clientinterfaceli@letsgoclientinterfaceli.com:/home/clientinterfaceli
+
+
+PROTECT SSL keys
+-$ sudo mv ~/grpc_private_key.key ~/grpc_public_cert.pem /etc/ssl
+-$ sudo chmod 600 /etc/ssl/grpc_private_key.key /etc/ssl/grpc_public_cert.pem
+-$ sudo chown root /etc/ssl/grpc_private_key.key /etc/ssl/grpc_public_cert.pem
+
+
+ADD these as environment variables
+$ sudo vim /etc/environment
+-**MAKE SURE TO CHANGE __**
+# NOTE: LetsGo C++ Environment variables are directly started by the service. Check /etc/systemd/system/clientInterface.service.
+# LetsGo CMake environment variables
+CMAKE_PREFIX_PATH_LETS_GO='/home/clientinterface__/dependencyBuilds/grpc_1_50_1'
+SERVER_SPECIFIC_PROTO_FILE_DIRECTORY_LETS_GO='/home/clientinterface__/clientInterface/Deployment/proto_server_specific'
+CLIENT_SERVER_PROTO_FILE_DIRECTORY_LETS_GO='/home/clientinterface__/clientInterface/Deployment/proto_client_server_shared'
+SERVER_SPECIFIC_PROTO_INCLUDE_PATHS_LETS_GO='/home/clientinterface__/clientInterface/cmake-build-release/generated_proto_client_server_shared'
+
+
+CREATE a new service
+-$ sudo vim /etc/systemd/system/clientInterface.service
+-https://medium.com/@benmorel/creating-a-linux-service-with-systemd-611b5c8b91d6
+-https://www.freedesktop.org/software/systemd/man/systemd.service.html#RestartSec=
+-copy below contents 
+-*** MAKE SURE TO CHANGE __ TO THE CORRECT VALUE ***
+-*** CHANGE CURRENT_SERVER_IP_ADDRESS_LETS_GO TO THE CORRECT VALUE ***
+-NOTE: The Limit settings are changing the ulimit settings for the systemd environment (can read more about them at link below). If these are changed then the values inside /etc/security/limits.conf need to change too.
+-NOTE: TasksMax should match the above kernel.pid_max when setting up sysctl.conf.
+--https://unix.stackexchange.com/questions/345595/how-to-set-ulimits-on-service-with-systemd
+[Unit]
+Description=Primary server for the client interface.
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+RestartPreventExitStatus=255
+ExecStart=/home/clientinterface__/clientInterface/cmake-build-release/server/server
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/clientinterface__/clientInterface/protoc_3_20_3/bin
+Environment=CURRENT_SERVER_IP_ADDRESS_LETS_GO=1
+Environment=CURRENT_SERVER_GRPC_PORT_LETS_GO=50051
+Environment=GRPC_SSL_KEY_DIRECTORY_LETS_GO=/etc/ssl/
+Environment=ERROR_LOG_OUTPUT_DIRECTORY_LETS_GO=/home/clientinterface__/clientInterface/Logging/
+Environment=PYTHON_FILES_DIRECTORY_LETS_GO="sys.path.append('/home/clientinterface__/clientInterface/Deployment/LetsGoServer/server/python')"
+Environment=LETS_GO_PATH_TO_SRC="/home/clientinterface__/clientInterface/Deployment/LetsGoServer/server/src"
+Environment=MONGODB_REPLICA_SET_URI_LETS_GO='{redacted},{redacted},{redacted}/?replicaSet=letsGoRs&tls=true&maxPoolSize=1000&retryWrites=true&w=1&tlsCertificateKeyFile=/etc/ssl/clientInterface.pem&tlsCAFile=/etc/ssl/ca.pem&authSource=$external&authMechanism=MONGODB-X509'
+TasksMax=64000
+Environment=PYTHONPATH=$PYTHONPATH:/home/clientinterface__/.local/lib/python3.8/site-packages
+LimitCPU=infinity
+LimitFSIZE=infinity
+LimitDATA=infinity
+LimitCORE=0
+LimitRSS=infinity
+LimitNOFILE=64000
+LimitAS=infinity
+LimitNPROC=64000
+LimitMEMLOCK=infinity
+LimitLOCKS=infinity
+LimitNICE=0
+LimitRTPRIO=0
+
+[Install]
+WantedBy=multi-user.target
+
+
+SETUP LetsGoServer project to be uploaded from CLion (from desktop)
+-Go to {Settings | Tools | SSH Configurations}
+--Add the Host, Port and Username; set Authentication type: Password
+-Go to {Settings | Build, Execution, Deployment | Deployment}
+--Add a Deployment
+--Type: SFTP, SSH Configuration: {The one that was just created}, Root path: /home/clientinterface__ ***MAKE SURE TO CHANGE __***
+--Go to 'Mappings' Tab
+---Add local Paths
+---{redacted}
+--Go to 'Excluded Paths' Tab 
+---Add excluded paths
+----{redacted}
+-Go to {Settings | Build, Execution, Deployment | Deployment | Options}
+--Make sure 'Overwrite up-to-date files' is off
+---This will allow 'Upload to...' to transfer ONLY files that require updated. It will not speed up the upload by much. But it will allow cmake --build to be run on the server which is much faster than rebuilding the entire project.
+
+
+UPLOAD LetsGoServer project from CLion
+-Select from menu {Tools | Deployments | Upload to...}
+-Select sever
+-Enter password
+-Upload
+
+
+MAKE the server run at all times
+-sudo systemctl daemon-reload
+-sudo systemctl start clientInterface
+-sudo systemctl enable clientInterface
+-sudo systemctl status clientInterface
+--should be active
+
+
+CREATE scripts
+-vim ~/clientInterface/cleanAndRebuild.sh
+#!/bin/bash
+
+# Environment variables for CMake are set inside of /etc/environment. Not passed to the command line when calling cmake.
+# Environment variables for C++ are set inside /etc/systemd/system/clientInterface.service.
+
+# Clean previous build
+rm -r ~/clientInterface/cmake-build-release
+
+cmake -S~/clientInterface/Deployment/LetsGoServer -B~/clientInterface/cmake-build-release -G "CodeBlocks - Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/bin/gcc-11 -DCMAKE_CXX_COMPILER=/usr/bin/g++-11
+
+cmake --build ~/clientInterface/cmake-build-release --target server
+-vim ~/clientInterface/standardBuild.sh
+#!/bin/bash
+
+cmake --build ~/clientInterface/cmake-build-release --target server
+-chmod +x ~/clientInterface/cleanAndRebuild.sh ~/clientInterface/cmake-build-release
+
+
+TESTING: on reboot
+-make sure $PATH points to protoc_3_20_3/bin
+--echo $PATH
+-make sure server is running
+--sudo systemctl status clientInterface
+---make sure it is running
+---make sure that 'Tasks' is (limit: 64000)
+-make sure an sms can send (can modify send_sms.py a little and run python3 on it)
+-make sure an email can send (can modify send_email.py a little and run python3 on it)
+
+
+
+**MONGODB SPECIFIC SERVER SETUP**
+
+
+SET readahead to 32 on startup
+-$ sudo vim /etc/systemd/system/mongodb-startup-script.service
+--copy below script in
+[Unit]
+Description=Startup scripts to run before mongoDB starts
+After=sysinit.target local-fs.target
+Before=mongod.service
+
+[Service]
+ExecStart=/usr/local/bin/mongodb-startup-script.sh
+
+[Install]
+WantedBy=default.target
+-$ sudo vim /usr/local/bin/mongodb-startup-script.sh
+--copy the below script in
+#!/bin/bash
+
+sudo /sbin/blockdev --setra 32 /dev/sda
+-$ sudo chmod 744 /usr/local/bin/mongodb-startup-script.sh
+-$ sudo chmod 664 /etc/systemd/system/mongodb-startup-script.service
+-$ sudo systemctl daemon-reload
+-$ sudo systemctl enable mongodb-startup-script.service
+
+
+SETUP SYSTEM CONFIG FILE
+$ sudo vim /etc/sysctl.conf
+vm.swappiness=1
+vm.max_map_count=128000
+fs.file-max=98000
+kernel.pid_max=64000
+kernel.threads-max=64000
+net.ipv4.tcp_keepalive_time=120
+
+
+FIX ULIMIT SETTINGS
+-copy contents of limits_conf to end of /etc/security/limits.conf
+-$ sudo vim /etc/pam.d/common-session
+-add the below lines to end of file
+# make the ulimits values inside /etc/security/limits.conf take effect
+session required        pam_limits.so
+
+
+DISABLE transparent huge pages (instructions below)
+-https://www.mongodb.com/docs/manual/tutorial/transparent-huge-pages/
+
+
+NOTES before installing MongoDB
+-Verify latest stable release is installed with package manager https://www.mongodb.com/try/download/community
+
+
+MAKE sure C is installed
+-$ sudo apt-get install libc6
+
+
+INSTALL mongoDB https://www.mongodb.com/docs/manual/tutorial/install-mongodb-on-ubuntu/
+-$ wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
+-$ echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+-$ sudo apt-get update
+-$ sudo apt-get install -y mongodb-org
+
+
+EDIT /etc/mongod.conf (https://www.mongodb.com/docs/manual/reference/configuration-options/)
+-port 61132
+-bindIp: localhost,<server dns>
+-dbPath /mnt/secure_xfs_mongodb/
+storage:
+  journal:
+    enabled: true
+    
+security:
+  javascriptEnabled: false
+  
+cloud:
+  monitoring:
+    free:
+      state: off
+
+
+GIVE only mongodb permissions over the database partition
+-$ sudo chmod 700 /mnt/secure_xfs_mongodb/
+-$ sudo chown mongodb:mongodb /mnt/secure_xfs_mongodb/
+
+
+START and access mongoDB
+-$ sudo systemctl start mongod
+-$ sudo systemctl status mongod
+-$ mongosh --port 61132
+-db.disableFreeMonitoring()
+-no need to run below command yet (may be useful to have)
+--$ sudo systemctl stop mongod
+-setup to restart on server restart (this will use the config file /etc/mongod.conf for options)
+--$ sudo systemctl enable mongod
+
+
+Check on restart (mongoDB server specific settings)
+-readahead
+--$ sudo blockdev --getra /dev/sda
+---32
+-make sure /mnt/secure_xfs_mongodb/ is mounted
+--$ df -h
+-swappiness
+--$ cat /proc/sys/vm/swappiness
+---1
+-max_map_count
+--$ cat /proc/sys/vm/max_map_count
+---128000
+-fs.file-max
+--$ /sbin/sysctl fs.file-max
+---98000
+-kernel.pid_max
+--$ cat /proc/sys/kernel/pid_max
+---64000
+-kernel.threads-max
+--$ cat /proc/sys/kernel/threads-max
+---64000
+-keepalive time
+--$ cat /proc/sys/net/ipv4/tcp_keepalive_time
+---120
+-compare ulimit settings to limits_conf contents
+--$ ulimit -a
+-make sure transparent huge pages are disabled
+--$ cat /sys/kernel/mm/transparent_hugepage/enabled
+---[never] should be set
+-mongodb is running
+--$ sudo systemctl status mongod
+-can connect through mongdb through shell (execute below from outside server)
+--$ mongosh --host <ip-address/dns> --port 61132
+-when connecting to mongosh --port 61132 only one warning should be displayed
+--Access control is not enabled for the database
+
+
+
+**AFTER ALL DATABASE SERVERS ARE SET UP**
+
+
+NOTES
+-Good info here, especially the logical DNS stuff at the top.
+--https://www.digitalocean.com/community/tutorials/how-to-configure-a-mongodb-replica-set-on-ubuntu-20-04#step-1-configuring-dns-resolution
+-NOTE: Generated certificates for ssl/tls and x.509 authenication (NOT JUST SSL/TLS).
+-NOTE: There are more references above for SSL/TLS and x509 authentication.
+--https://www.bustedware.com/blog/mongodb-ssl-tls-x509-authentication
+-NOTE: The CA password for release is stored in file Secure_Accounts_And_Passwords.txt under 'Certificate Authority (CA) pass'. It takes the place of <pass> below. OR the testing CA password is 'test' so it would be pass:test below.
+
+
+CREATE certificate authority (CA) (from desktop)
+openssl req -passout pass:<pass> -new -x509 -days 36500 -extensions v3_ca -keyout ca_private.pem -out ca.pem -subj "/CN=CA/OU=MONGO/O=LETSGO/L=PHOENIX/ST=AZ/C=US"
+
+
+CREATE Certificate for root client (from desktop)
+openssl req -newkey rsa:4096 -nodes -out rootUser.csr -keyout rootUser.key -subj '/CN=RootUser/OU=MONGO_CLIENTS/O=LETSGO/L=PHOENIX/ST=AZ/C=US'
+
+
+CREATE Certificate for client interface client (from desktop)
+openssl req -newkey rsa:4096 -nodes -out clientInterface.csr -keyout clientInterface.key -subj '/CN=ClientInterface/OU=MONGO_CLIENTS/O=LETSGO/L=PHOENIX/ST=AZ/C=US'
+
+
+CREATE Certificate for web server client (from desktop)
+openssl req -newkey rsa:4096 -nodes -out webServer.csr -keyout webServer.key -subj '/CN=WebServer/OU=MONGO_CLIENTS/O=LETSGO/L=PHOENIX/ST=AZ/C=US'
+
+
+CREATE Certificates for members of replica set (from desktop)
+openssl req -newkey rsa:4096 -nodes -out hostwindsNode.csr -keyout hostwindsNode.key -subj '/CN=hostwinds.replset.member/OU=MONGO/O=LETSGO/L=PHOENIX/ST=AZ/C=US'
+openssl req -newkey rsa:4096 -nodes -out digitalOceanNode.csr -keyout digitalOceanNode.key -subj '/CN=digitalocean.replset.member/OU=MONGO/O=LETSGO/L=PHOENIX/ST=AZ/C=US'
+openssl req -newkey rsa:4096 -nodes -out linodeNode.csr -keyout linodeNode.key -subj '/CN=linode.replset.member/OU=MONGO/O=LETSGO/L=PHOENIX/ST=AZ/C=US'
+
+
+SIGN the root user certificate signing requests with CA (from desktop)
+openssl x509 -passin pass:<pass> -sha256 -req -days 36500 -in rootUser.csr -CA ../Certificate_Authority/ca.pem -CAkey ../Certificate_Authority/ca_private.pem -CAcreateserial -out rootUser-signed.crt -extensions v3_req -extfile <(
+cat << EOF
+[ v3_req ]
+keyUsage = digitalSignature
+extendedKeyUsage = clientAuth
+
+EOF
+)
+
+
+SIGN the client interface certificate signing requests with CA (from desktop)
+openssl x509 -passin pass:<pass> -sha256 -req -days 36500 -in clientInterface.csr -CA ../Certificate_Authority/ca.pem -CAkey ../Certificate_Authority/ca_private.pem -CAcreateserial -out clientInterface-signed.crt -extensions v3_req -extfile <(
+cat << EOF
+[ v3_req ]
+keyUsage = digitalSignature
+extendedKeyUsage = clientAuth
+
+EOF
+)
+
+
+SIGN the web server certificate signing requests with CA (from desktop)
+openssl x509 -passin pass:<pass> -sha256 -req -days 36500 -in webServer.csr -CA ../Certificate_Authority/ca.pem -CAkey ../Certificate_Authority/ca_private.pem -CAcreateserial -out webServer-signed.crt -extensions v3_req -extfile <(
+cat << EOF
+[ v3_req ]
+keyUsage = digitalSignature
+extendedKeyUsage = clientAuth
+
+EOF
+)
+
+
+-hostwinds
+openssl x509 -passin pass:<pass> -sha256 -req -days 36500 -in hostwindsNode.csr -CA ../Certificate_Authority/ca.pem -CAkey ../Certificate_Authority/ca_private.pem -CAcreateserial -out hostwindsNode-signed.crt -extensions v3_req -extfile <(
+cat << EOF
+[ v3_req ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = localhost
+DNS.2 = hostwinds.replset.member
+IP.1 = 127.0.0.1
+IP.2 = 23.254.244.155
+EOF
+)
+
+
+-digitalOcean
+openssl x509 -passin pass:<pass> -sha256 -req -days 36500 -in digitalOceanNode.csr -CA ../Certificate_Authority/ca.pem -CAkey ../Certificate_Authority/ca_private.pem -CAcreateserial -out digitalOceanNode-signed.crt -extensions v3_req -extfile <(
+cat << EOF
+[ v3_req ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = localhost
+DNS.2 = digitalocean.replset.member
+IP.1 = 127.0.0.1
+IP.2 = 159.223.203.177
+EOF
+)
+
+
+-linode
+openssl x509 -passin pass:<pass> -sha256 -req -days 36500 -in linodeNode.csr -CA ../Certificate_Authority/ca.pem -CAkey ../Certificate_Authority/ca_private.pem -CAcreateserial -out linodeNode-signed.crt -extensions v3_req -extfile <(
+cat << EOF
+[ v3_req ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = localhost
+DNS.3 = linode.replset.member
+IP.1 = 127.0.0.1
+IP.2 = 173.255.206.100
+EOF
+)
+
+
+CREATE the privacy enhanced mail (PEM) file for mongod (from desktop)
+cat rootUser-signed.crt rootUser.key > rootUser.pem
+cat clientInterface-signed.crt clientInterface.key > clientInterface.pem
+cat webServer-signed.crt webServer.key > webServer.pem
+cat hostwindsNode-signed.crt hostwindsNode.key > hostwindsNode.pem
+cat digitalOceanNode-signed.crt digitalOceanNode.key > digitalOceanNode.pem
+cat linodeNode-signed.crt linodeNode.key > linodeNode.pem
+
+
+SEND Files To Servers (from desktop)
+scp -P 7828 hostwindsNode.pem ../Certificate_Authority/ca.pem ../Users/rootUser.pem {redacted}:/home/letsgodatabasehw
+scp -P 7828 digitalOceanNode.pem ../Certificate_Authority/ca.pem ../Users/rootUser.pem {redacted}:/home/letsgodatabasedo
+scp -P 7828 linodeNode.pem ../Certificate_Authority/ca.pem ../Users/rootUser.pem {redacted}:/home/letsgodatabaseln
+scp -P 7828 ../Certificate_Authority/ca.pem ../Users/clientInterface.pem {redacted}:/home/clientinterfaceli
+scp -P 7828 ../Certificate_Authority/ca.pem ../Users/clientInterface.pem {redacted}:/home/clientinterfacehw
+
+
+MOVE these files from the user home directory to /etc/ssl and set to only be used by mongodb
+-NOTE: Giving ownership directly to MongoDB, so not using the /etc/ssl/certs or /etc/ssl/private folders.
+-below commands must be run on EVERY mongodb server
+--$ sudo mv ca.pem rootUser.pem <node-name>.pem /etc/ssl
+--$ sudo chmod 600 /etc/ssl/ca.pem /etc/ssl/rootUser.pem /etc/ssl/<node-name>.pem
+--$ sudo chown mongodb:mongodb /etc/ssl/ca.pem /etc/ssl/rootUser.pem /etc/ssl/<node-name>.pem
+-below commands must be run on EVERY client interface server
+--$ sudo mv ca.pem clientInterface.pem /etc/ssl
+--$ sudo chmod 600 /etc/ssl/ca.pem /etc/ssl/clientInterface.pem
+--$ sudo chown <node-username> /etc/ssl/ca.pem /etc/ssl/clientInterface.pem
+
+
+$ sudo vim /etc/mongod.conf
+-NOTE: Mode must be set to requireTLS in order for clusterAuthMode: x509 to work.
+-NOTE: In my situation I don't need to use net.tls.clusterFile.
+--Can read about it under 'MongoDB Configuration for Membership Authentication' at below link.
+---https://www.mongodb.com/docs/manual/core/security-x.509/#member-x.509-certificates
+-add below text
+net:
+  tls:
+    mode: requireTLS
+    certificateKeyFile: /etc/ssl/<server-file-name>.pem
+    CAFile: /etc/ssl/ca.pem
+  http:
+    enabled: false
+    RESTInterfaceEnabled: false
+
+security:
+  authorization: enabled
+  clusterAuthMode: x509
+  
+replication:
+  replSetName: "letsGoRs"
+
+
+INITIATE replica set
+-log into one of them (used hostwinds) enter the below command
+--mongosh --tls --port 61132 --tlsCertificateKeyFile /etc/ssl/rootUser.pem --tlsCAFile /etc/ssl/ca.pem
+rs.initiate(
+{
+_id: "letsGoRs",
+members: [
+{ _id: 0, host: "{redacted}" },
+{ _id: 1, host: "{redacted}" },
+{ _id: 2, host: "{redacted}" }
+]
+})
+-while still inside the database, create the root user
+--this will disallow the currently logged in user from doing anything (use rs.status() to see before and after the user is created)
+db.getSiblingDB("$external").runCommand({createUser:"C=US,ST=AZ,L=PHOENIX,O=LETSGO,OU=MONGO_CLIENTS,CN=RootUser",roles:[{role:"root",db:"admin"}]})
+-setup the client interface user
+use admin
+db.createRole({role: "allowCollMod",privileges: [{resource:{db: "", collection: ""},actions:["collMod"]}], roles: []})
+db.getSiblingDB("$external").runCommand({createUser:"C=US,ST=AZ,L=PHOENIX,O=LETSGO,OU=MONGO_CLIENTS,CN=ClientInterface",roles:[{ role: "readWriteAnyDatabase", db: "admin" },{ role: 'allowCollMod', db: 'admin' }]})
+-setup the web server user
+db.getSiblingDB("$external").runCommand({createUser:"C=US,ST=AZ,L=PHOENIX,O=LETSGO,OU=MONGO_CLIENTS,CN=WebServer",roles:[{ role: "readWrite", db: "Accounts" }, { role: "readWrite", db: "ERRORS" }]})
+
+
+COMMANDS for connecting
+-NOTE: 'authenticationDatabase' and 'authenticationMechanism' seem to be able to be ommited. However, I can't find any docs on it so leaving them in.
+-connect locally to single instance
+sudo mongosh --tls --port 61132 --tlsCertificateKeyFile /etc/ssl/rootUser.pem \
+    --tlsCAFile /etc/ssl/ca.pem \
+    --authenticationDatabase '$external' \
+    --authenticationMechanism MONGODB-X509
+-connect locally to entire replica set
+sudo mongosh --tls --host letsGoRs/{redacted},{redacted},{redacted} \
+    --tlsCertificateKeyFile /etc/ssl/rootUser.pem \
+    --tlsCAFile /etc/ssl/ca.pem \
+    --authenticationDatabase '$external' \
+    --authenticationMechanism MONGODB-X509
+-connect remotly to the entire replica set
+mongosh --tls --host letsGoRs/{redacted},{redacted},{redacted} \
+    --tlsCertificateKeyFile ~/Documents/Lets_Go_Docs/Ssl_MongoDB/Users/rootUser.pem \
+    --tlsCAFile ~/Documents/Lets_Go_Docs/Ssl_MongoDB/Certificate_Authority/ca.pem \
+    --authenticationDatabase '$external' \
+    --authenticationMechanism MONGODB-X509
+-rs.status() 
+-rs.conf()
+
+
+
+MOVE priority of california member down (other rs and client interface members are in dallas)
+cfg = rs.conf()
+cfg.members[1].priority = 0.5
+rs.reconfig(cfg)
+-make sure priority effected
+rs.conf()
+
+
+NOTE: There are weird certificate warnings during startup inside /var/log/mongodb/mongod.log. Don't seem to be able to do anything about them.
+-https://www.mongodb.com/community/forums/t/weird-certificate-warnings-during-startup/158436/2
+-Don't see how to directly test if SSL/TLS is enabled. It seems to be, otherwise the requireTLS options would stop the connections.
+
+
+
+**AFTER CLIENT INTERFACE IS SETUP**
+
+
+NOTES: Not using user authenticationRestrictions for users for several reasons.
+-Setting up the root (or any user seemingly) to only be able to connect with localhost doesn't work properly on a replica set (using "127.0.0.1"). I get permanently locked out.
+-It is redundant with the firewall (iptables). The exact same thing is accomplished.
+-It gives another location that IP addresses need to be updated because DNS cannot be used.
+-Example of updating a user to have authenticationRestrictions
+db.updateUser("<user>", {
+    authenticationRestrictions: [ {
+        clientSource: ["127.0.0.1"],
+        serverAddress: []
+    } ]
+})
+
+
+TESTING:
+-make sure each node can be primary (change priorities with below command, rs.reconfig will force an election)
+cfg = rs.conf()
+cfg.members[1].priority = {priority; float}
+rs.reconfig(cfg)
+--make sure priority effected
+rs.conf()
+-make sure each node can go down
+-make sure each client interface server and the web server can connect to the database AND that the account restrictions are working (rs.status() should not work, inserting a doc should)
+sudo mongosh --tls --host letsGoRs/{redacted},{redacted},{redacted} \
+    --tlsCertificateKeyFile /etc/ssl/clientInterface.pem \
+    --tlsCAFile /etc/ssl/ca.pem \
+    --authenticationDatabase '$external' \
+    --authenticationMechanism MONGODB-X509
+-below command will connect as root when inside a database server.
+sudo mongosh --tls --host letsGoRs/{redacted},{redacted},{redacted} \
+    --tlsCertificateKeyFile /etc/ssl/rootUser.pem \
+    --tlsCAFile /etc/ssl/ca.pem \
+    --authenticationDatabase '$external' \
+    --authenticationMechanism MONGODB-X509
+
+
+NOTES: Using fail2ban with mongodb.
+-fail2ban checks logs using regex. So it would be /var/log/mongodb/mongod.log for mongodb.
+--https://gist.github.com/luiseok/fb6d43701b17f4d1de5afa4121f21f27
+-There are a few things to hypothetically check here.
+--Failed connection attempts from other members. Or false members.
+--Failed connection attempts from people attempting to log in as a user.
+-First, only certain IP addresses are allowed the connect in.
+-Second, mongodb doesn't seem to guarantee syntax anywhere. 
+--The regex search may or may not work. And could stop working on version updates.
+--In the example above, SCRAM authentication is used, I use x509 authentication.
+-Example log
+--{"t":{"$date":"2023-01-05T11:10:58.989+00:00"},"s":"I",  "c":"ACCESS",   "id":20240,   "ctx":"conn21","msg":"Failed to acquire user because of unmet authentication restrictions","attr":{"user":{"user":"my_first_user","db":"admin"},"reason":"Evaluation of direct authentication restrictions failed: Restriction '{anyOf: [{allOf: [{\"clientSource\": [\"{redacted}/128\"]}]}]}' in '{allOf: [{anyOf: [{allOf: [{\"clientSource\": [\"{redacted}/128\"]}]}]}]}' unmet"}}
+
+
+
+

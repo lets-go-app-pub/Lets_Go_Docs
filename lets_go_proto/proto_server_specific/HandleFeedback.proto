@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+import "LoginToServerBasicInfo.proto";
+import "FeedbackTypeEnum.proto";
+
+package handle_feedback;
+
+//update feedback variable to recently selected feedback
+message UpdateFeedbackTimeViewedRequest {
+  LoginToServerBasicInfo login_info = 1;
+  FeedbackType feedback_type = 2;
+  int64 timestamp_feedback_observed_time = 3; //timestamp in ms
+}
+
+message UpdateFeedbackTimeViewedResponse {
+  bool success = 1;
+
+  //returned if success == false
+  string error_msg = 2;
+
+  //returned if success == true
+  //will return either
+  // 1) the timestamp stored in the database
+  // 2) the timestamp passed with the request
+  // whichever is larger
+  int64 timestamp_feedback_observed_time = 3; //timestamp in ms
+}
+
+message EmptyMessage {}
+
+message SingleFeedbackUnit {
+  FeedbackType feedback_type = 1;
+  string feedback_oid = 2; //OID of feedback on server
+  string account_oid = 3; //account OID of feedback sender
+  string activity_name = 4; //only used with ACTIVITY_SUGGESTION the name of the suggested activity
+  string message = 5; //the string the user entered as feedback
+  int64 timestamp_stored_on_server = 6; //timestamp in ms
+  string marked_as_spam_by_admin_name = 7; //if this was not marked as spam will be "", else admin_name
+
+  bool marking_as_spam = 8; //this is a client side only value
+}
+
+message FeedbackElement {
+  oneof TypeOfElement {
+    SingleFeedbackUnit single_feedback_unit = 1;
+    EmptyMessage end_of_feedback_element = 2;
+    EmptyMessage more_feedback_elements_available = 3;
+  }
+}
+
+//request specific type of feedback (initial request)
+message GetInitialFeedbackRequest {
+  LoginToServerBasicInfo login_info = 1;
+  FeedbackType feedback_type = 2;
+}
+
+//request feedback before or after a specific time (recycler view requests)
+//request specific type of feedback (initial request)
+message GetFeedbackUpdateRequest {
+  LoginToServerBasicInfo login_info = 1;
+  FeedbackType feedback_type = 2;
+  int64 timestamp_of_message_at_end_of_list = 3; //timestamp in ms
+
+  //if set to true will request number_feedback_to_request messages BEFORE timestamp_stored_on_server
+  //if not will request number_feedback_to_request messages AFTER timestamp_stored_on_server
+  // never inclusive
+  bool request_before_timestamp = 4;
+}
+
+message GetFeedbackResponse {
+  bool success = 1;
+
+  //returned when successful == false
+  string error_msg = 2;
+
+  //returned when successful == true
+  // will return a list of feedback elements with 'caps' (FeedbackElement::TypeOfElement cases)
+  // if previous was requested, a cap at the start
+  // if next was requested, a cap at the end
+  // if next & previous were requests caps on both ends
+  // minimum size is 2
+  repeated FeedbackElement feedback_list = 3;
+
+  //only used when GetInitialFeedbackRPC response
+  int64 timestamp_of_most_recently_viewed_feedback = 4; //timestamp in ms
+}
+
+message SetFeedbackToSpamRequest {
+  LoginToServerBasicInfo login_info = 1;
+  FeedbackType feedback_type = 2;
+
+  string feedback_oid = 3; //Object ID of feedback document
+}
+
+message SetFeedbackToSpamResponse {
+  bool success = 1;
+
+  //returned when successful == false
+  string error_msg = 2;
+}
+
+service HandleFeedbackService {
+  rpc UpdateFeedbackTimeViewedRPC (UpdateFeedbackTimeViewedRequest) returns (UpdateFeedbackTimeViewedResponse) {}
+  rpc GetInitialFeedbackRPC (GetInitialFeedbackRequest) returns (GetFeedbackResponse) {}
+  rpc GetFeedbackUpdateRPC (GetFeedbackUpdateRequest) returns (GetFeedbackResponse) {}
+  rpc SetFeedbackToSpamRPC (SetFeedbackToSpamRequest) returns (SetFeedbackToSpamResponse) {}
+}

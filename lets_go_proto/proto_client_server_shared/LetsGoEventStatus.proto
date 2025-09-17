@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+option java_package = "lets_go_event_status";
+
+enum LetsGoEventStatus {
+  UNKNOWN_EVENT_STATUS = 0; //This is the default value, it shouldn't be used in practice.
+  NOT_AN_EVENT = 1; //Account is not an event type. (assuming the enum is stored inside the OtherUser database on Android)
+  ONGOING = 2; //The event has not yet completed.
+  COMPLETED = 3; //The event has completed successfully.
+  CANCELED = 4; //The event was canceled by the user that started it or an admin.
+}

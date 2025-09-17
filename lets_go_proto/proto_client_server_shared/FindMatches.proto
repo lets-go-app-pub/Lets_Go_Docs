@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package findmatches;
+
+import "StatusEnum.proto";
+import "MemberSharedInfoMessage.proto";
+import "LoginToServerBasicInfo.proto";
+
+message FindMatchesRequest {
+
+  LoginToServerBasicInfo login_info = 1;
+
+  int32 number_messages = 2; //the server will have a max size of messages, this is just for older version support
+
+  double client_longitude = 3; //the longitude used to run the algorithm for the client
+  double client_latitude = 4; //the latitude used to run the algorithm for the client
+}
+
+message SingleMatchMessage {
+
+  MemberSharedInfoMessage member_info = 1;
+
+  double point_value = 2;
+  int64 expiration_time = 3; //used on android side to know when match has 'expired'
+  bool other_user_match = 4; //this will be true if another user swiped yes on this person to inject it into the queue
+
+  int32 swipes_remaining = 5; //number of swipes remaining after this message occurs
+  int64 swipes_time_before_reset = 6; //the amount of time before the swipes will be reset
+                                       //NOTE: Not the actual timestamp they will be reset, but the number of ms until a reset will occur.
+
+  int64 timestamp = 7; //timestamp used by the device to manage message
+}
+
+message FindMatchesCapMessage {
+  enum SuccessTypes {
+    UNKNOWN = 0;
+    SUCCESSFULLY_EXTRACTED = 1;
+    NO_MATCHES_FOUND = 2;
+    MATCH_ALGORITHM_ON_COOL_DOWN = 3;
+    NO_SWIPES_REMAINING = 4;
+  }
+
+  ReturnStatus return_status = 1; //enum for status of response
+  SuccessTypes success_type = 2; //set when return_status == SUCCESS
+
+  //NOTE: This is Not the actual time they will be reset but the number of milliseconds until a reset will occur.
+  int64 swipes_time_before_reset = 3; //the amount of time before the swipes will be reset
+
+  //If MATCH_ALGORITHM_ON_COOL_DOWN or NO_MATCHES_FOUND is returned this will
+  // be set to the cool down in milliseconds, if not it will be default.
+  int64 cool_down_on_match_algorithm = 4;
+
+  int64 timestamp = 5; //timestamp used by the device to manage message
+}
+
+message FindMatchesResponse {
+  oneof response_types {
+    SingleMatchMessage single_match = 1; //the match information
+    FindMatchesCapMessage find_matches_cap = 2;
+  }
+}
+
+service FindMatchesService {
+  rpc FindMatchRPC(FindMatchesRequest) returns (stream FindMatchesResponse) {}
+}

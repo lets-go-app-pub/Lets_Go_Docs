@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+import "EventRequestMessage.proto";
+import "LoginToServerBasicInfo.proto";
+import "LetsGoEventStatus.proto";
+import "UserAccountType.proto";
+
+option java_multiple_files = true;
+
+package admin_event_commands;
+
+message AddAdminEventRequest {
+  LoginToServerBasicInfo login_info = 1;
+
+  EventRequestMessage event_request = 2;
+}
+
+message AddAdminEventResponse {
+  //true if was successfully updated
+  bool successful = 1;
+
+  //set if successful == false
+  string error_message = 2;
+
+  string chat_room_id = 3;
+
+  int64 timestamp_ms = 4;
+
+  string event_oid = 5;
+}
+
+message SingleEvent {
+  string event_oid = 1;
+  int64 time_created_ms = 2;
+  int64 expiration_time_ms = 3;
+  string created_by = 4;
+  string chat_room_id = 5;
+  string event_title = 6;
+  UserAccountType account_type = 7;
+  LetsGoEventStatus event_status = 8;
+  int32 number_swipes_yes = 9;
+  int32 number_swipes_no = 10;
+  int32 number_swipes_block_and_report = 11;
+}
+
+message UserAccountTypesToSearch {
+  repeated UserAccountType events_to_search_by = 1;
+}
+
+message GetEventsRequest {
+
+  enum TimeSearch {
+    NO_SEARCH = 0;
+    LESS_THAN = 1;
+    GREATER_THAN = 2;
+  }
+
+  LoginToServerBasicInfo login_info = 1;
+
+  oneof events_created_by {
+    UserAccountTypesToSearch account_types_to_search = 2;
+    string single_user_created_by = 3;
+  }
+
+  TimeSearch start_time_search = 4;
+  int64 events_start_time_ms = 5;
+
+  TimeSearch expiration_time_search = 6;
+  int64 events_expiration_time_ms = 7;
+}
+
+message GetEventsResponse {
+  //true if was successfully updated
+  bool successful = 1;
+
+  //set if successful == false
+  string error_message = 2;
+
+  repeated SingleEvent events = 3;
+
+  int64 timestamp_ms = 4;
+}
+
+service AdminEventCommandsService {
+  rpc AddAdminEventRPC(AddAdminEventRequest) returns (AddAdminEventResponse) {}
+  rpc GetEventsRPC(GetEventsRequest) returns (GetEventsResponse) {}
+}

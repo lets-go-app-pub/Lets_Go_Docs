@@ -1,0 +1,107 @@
+
+-Patch contents (subscriptions)
+--It seems to mostly consist of a BillingClient.queryPurchasesAsync() and just syncing this with my app.
+---If an account is deleted, banned or possibly timed out, will need to cancel the subscription w/ Google.
+---Need to set up a Google merchant account. Go to Google Play Console -> App -> Products -> Subscriptions.
+---May need to set up something on the back end for verification.
+----https://developers.google.com/android-publisher/api-ref/purchases/products/get
+---Links to explain how subscription works and stuff.
+----https://support.google.com/googleplay/android-developer/answer/140504?hl=en
+----https://support.google.com/googleplay/android-developer/answer/12154973
+----https://developer.android.com/google/play/billing/subscriptions
+--Subscribed users.
+---Need to be able to create events.
+---Need to be able to cancel any outstanding events.
+---No editing them as of right now.
+--Can either sign up through Google Play or by entering a code.
+---Probably make each account only able to use a code once.
+--Need statistics for each code.
+---How many users each code has been used by.
+--Need a way to insert codes on desktop interface.
+---Each code will require a few fields.
+----Amount of time code is valid for.
+----Amount of subscription time code will give.
+----Code itself (say 6-8 characters, but make it case insensitive).
+----Name of person code is associated with (for documentation purposes).
+---Reactivating the same code comes with some complications. Not going to reactivate codes.
+----If we want to pay people based on the number of users they bring us. Then making the codes to reactivate will screw with the statistics. I could build a system where it checks the account IDs instead. Then just keep track of unique IDs. But the asymetry would make the system less comprehensive and harder to manage/sustain.
+----This would also allow users to simply re-enter the same code repeatidly and continue getting a free month.
+--Unlimited swipes.
+---Probably just a really high number, say a swipe every 2 seconds or something.
+Subscription Implementations (Ideas)
+-Setting up the documents in the collection.
+--Have a field that is the code and put unique index on the field.
+--Have a field that is the user name associated with the code (documentation).
+--Have a field for the code start date.
+--Have a field for the code expiration date.
+--Have a field for the amount of time it allows users to sub for. (could be say a month)
+--Have a field for an array of account OIDs that used the code. If the start time and expiration time are longer than the time the code provides, this can be used to make sure uses are unique.
+-Need a way to enter codes on in app.
+--Probably want a subscribe button on the selection screen. Then want the new fragment to have a place to enter the code.
+--The code will probably need a separate function to apply subscriptions.
+-There are some TODO statements around Android that need set up for this.
+-Logout should also make sure the new field of USER_CREATED_EVENTS is synchronized with the events.
+-On the desktop interface, it would be nice to import the latest version numbers for all the stuff and set the defaults to only look at those values.
+
+
+
+Maybe later features.
+-I think I will need to add a script on the server(s) that run once a day and set any expired or canceled event accounts to MATCHING_ACTIVATED=false to remove them from the compound index. Might be able to just program it into my current server and only the one at the top of the GRPC_SERVER_ADDRESSES_URI list runs it at midnight every day or something.
+-Subscription for sharing with friends.
+-Maybe want 3% chance to win a sub for unsubscribed users?
+-A cool idea might be to be able to 'discover' events by giving a user a map near them of events. Then they can click the pin and push join or something. (Like the other LetsGo app)
+-Every month, 10% chance for users to win a free month. Want to display it to them if they win it.
+--Is this a thing? I need to look into how to subscribe with Google Play.
+-Would be a nice touch to give people a free month subscription on their birthday.
+-would like something to record run times for the major functions inside the database.
+-would also like a representation of missed messages relevant to DELAY_FOR_MESSAGE_ORDERING with the current 1 second delay.
+-would like to record the client request times, then can send them to the server during maitenence and find the median
+-SetMaxThreads is causing server crash, turned it off, but now it makes a thread for every connection, look into async server (maybe setup other server first though)
+--maybe migrate to async c++ server
+-would like a logging system for the server (maybe client too? not sure how to format it so it would help) that can be stored for debugging purposes
+--may also be able to use this with fail2ban on the server to stop dpam/ddos or whatever somehow? Need to be careful not to timeout actual users (or do I? its only 10 minutes).
+--probably want to remove anything that actually prints to std::out from the _RELEASE
+-little red dot not accurate
+--method 1
+---on device 1 user A sends a message
+---on device 2 log into user A and the little red dot will be there
+---this is because
+--method 2
+---on device 1 user A, don't have any messages that were not read
+---log onto user A on device 2, receive new messages (from user B) and view these messages (I was just sitting inside the chat room)
+---log back into user A on device 1, there is a red dot on the bottom nav bar, but no new messages
+--will probably have to re-do system somehow for this, the problem stems from messages sent on a delay, this means the observed time is passed from the server and it isn't accurate with the chat room last activity time, note that client_message_to_server does not actually use the message stored time as the last viewed time either, which exacerbates the problem
+---I think the problem is that, just because the user sent the message does not mean that they observed this message, right?
+---So the big problem comes from messages sent with a delay, its possible for messages to be sent 'in between'
+----So for example I send a message at 4:00, and my connection is down until 5:00
+-----I receive a message at 4:30
+------If I update the observed time to 5:00 when the message is sent, I will have set that I observed the message at 4:30 even though I didn't
+------If I update the observed time to 4:00 when the message is sent, Everything will be fine
+------If I update the chat room last active time to 5:00 when the message is sent, Everyone else will see it properly, but the observed time will be off for the current user
+------If I update the chat room last active time to 4:00 when the message is sent, It will send it at an invalid time for everyone else
+-----I don't receive any messages in between
+------If I update the observed time to 5:00 when the message is sent, I will have set that I observed the message at 4:30 even though I didn't
+------If I update the observed time to 4:00 when the message is sent, Everything will be fine
+------If I update the chat room last active time to 5:00 when the message is sent, Everyone else will see it properly, but the current user will be a bit different
+------If I update the chat room last active time to 4:00 when the message is sent, It will send it at an invalid time for everyone else
+--Little red dot sticks around
+---Go to the ChatRoomInfo Fragment on UserA
+---Join the chat room on UserB
+---block UserB with UserA
+---Go back to the messenger fragment, there is still a little red dot
+-finish client testing
+
+
+New Function updateUserCreatedEvent()
+-Can be almost identical to updateSingleMatchMember(), need to make the condition that it is an event created by the current user.
+--The current user thing isn't mandatory, but more restrictions are good, and it can easily be removed later if necessary.
+-Only request a single event at a time, the client can call multiple of these simultaneously.
+-Currently events cannot be updated by users, only by admins, but to allow for these things later the system should check for it.
+
+
+New Functions (need to know how google play handles subscriptions
+-AddSubscriptionCode (called from desktop interface)
+--Adds a 6-8 digit subscription code
+-Subscribe
+--Promotes subscription status
+-EnterSubscriptionCode

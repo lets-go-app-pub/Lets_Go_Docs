@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+option java_package = "requestmessages";
+
+message BirthdayMessage {
+  int32 birth_year = 1;
+  int32 birth_month = 2;
+  int32 birth_day_of_month = 3;
+  int32 age = 4;
+}
+
+message EmailMessage {
+  string email = 1;
+  bool requires_email_verification = 2; //NOTE: this is not required as pre-login info
+}
+
+message PictureMessage {
+  bytes file_in_bytes = 1; //the bytes for the file itself, will send back "~" if not returning a picture
+  int32 file_size = 2; //the size of the file, used to check for corrupted data, will send back 1 if not returning a picture
+
+  int32 index_number = 3; //the index number of the picture
+
+  //NOTE: these will only be sent with chat message pictures, user account pictures are a set height & width
+  int32 pic_height = 4;
+  int32 pic_width = 5;
+
+  // NOTE: this timestamp is the actual timestamp the picture was stored, not a generic timestamp when the message was called
+  int64 timestamp_picture_last_updated = 6; //the timestamp for when this picture was last updated, will send back -1 if not returning a picture;
+
+  //NOTE: only sent back to admin interface, not to client
+  string picture_oid = 7;
+}
+
+message PostLoginMessage {
+  string user_bio = 1;
+  string user_city = 2;
+  repeated string gender_range = 3; //list of the genders user is willing to match with
+  int32 min_age = 4; //minimum end of age range (inclusive)
+  int32 max_age = 5; //maximum end of age range (inclusive)
+  int32 max_distance = 6; //max distance user is willing to match (in miles)
+}
+
+//request server activities and categories specific request
+message ServerActivityOrCategoryMessage {
+  int32 index = 1; //index number of category or activity to be stored
+
+  double order_number = 2; //number in the list for client to sort categories by
+
+  string display_name = 3; //name of category or activity
+  string icon_display_name = 4; //name of category or activity for display under icon
+  //NOTE: if the name is "~" then the activity or category does not exist
+  int32 min_age = 5; //minimum age that can see this; ex: 18 would mean 18+ can see it
+
+  string color = 6; //this field will only be applicable to categories, it is the hex code for the category color
+  //NOTE: passed with the # sign so 7 characters
+
+  //These values are only set when response represents an activity, not a category
+  int32 category_index = 7; //index of the icon this activity uses
+  int32 icon_index = 8; //index of the icon this activity is used in
+}

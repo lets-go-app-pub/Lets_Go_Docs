@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+
+package email_sending_messages;
+
+import "StatusEnum.proto";
+import "LoginToServerBasicInfo.proto";
+
+enum EmailSentStatus {
+  EMAIL_VALUE_NOT_SET = 0; //default value
+  EMAIL_SUCCESS = 1; //email successfully sent
+  EMAIL_ON_COOL_DOWN = 2; //email was still on cool down
+  EMAIL_FAILED_TO_BE_SENT = 3; //python email function did not return 'sent' code as part of the response
+}
+
+//begin email verification
+message EmailVerificationRequest {
+  LoginToServerBasicInfo login_info = 1;
+}
+
+message EmailVerificationResponse {
+  ReturnStatus return_status = 1; //return status
+  EmailSentStatus email_sent_status = 2; //status of the message, only used when return_status == SUCCESS
+  bool email_address_is_already_verified = 3; //if true email address is already verified, only used when return_status == SUCCESS
+  int64 timestamp = 4; //timestamp the item was updated
+}
+
+//begin account recovery
+message AccountRecoveryRequest {
+  string phone_number = 1; //phone number user is requesting account recovery for
+  uint32 lets_go_version = 2; //pass current version of app
+}
+
+message AccountRecoveryResponse {
+
+  //NOTE: ACCOUNT_DOES_NOT_EXIST & ACCOUNT_CLOSED values are currently not used in order to avoid people fishing for
+  // phone numbers
+  enum AccountRecoveryStatus {
+    VALUE_NOT_SET = 0; //this is the default value and should only be set if a failure in gRPC occurred
+    SUCCESS = 1; //successfully ran function
+    ACCOUNT_SUSPENDED = 2; //message is displayed informing the user account closed; access status will also return if it was suspended or banned
+    ACCOUNT_BANNED = 3; //message is displayed informing the user account closed; access status will also return if it was suspended or banned
+    ACCOUNT_DOES_NOT_EXIST = 4; //message is displayed informing the user account closed; access status will also return if it was suspended or banned
+    OUTDATED_VERSION = 5; //outdated version of app used refuse to allow login
+    INVALID_PHONE_NUMBER = 6; //could means an invalid phone number was passed to the server
+    DATABASE_DOWN = 7; //error with database on server
+    UNKNOWN = 8; //the functions successfully started however a return value was not set
+    LG_ERROR = 9;
+  }
+
+  AccountRecoveryStatus account_recovery_status = 1; //status
+  EmailSentStatus email_sent_status = 2; //status of the message, only used when account_recovery_status == SUCCESS
+  int64 timestamp = 3; //timestamp the item was updated
+}
+
+service EmailSendingMessagesService {
+  rpc EmailVerificationRPC(EmailVerificationRequest) returns (EmailVerificationResponse) {} //requests email verification
+  rpc AccountRecoveryRPC(AccountRecoveryRequest) returns (AccountRecoveryResponse) {} //requests an email be sent for account recovery of passed phone number
+}

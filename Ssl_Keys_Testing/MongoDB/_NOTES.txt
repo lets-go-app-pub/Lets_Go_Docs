@@ -1,0 +1,7 @@
+The pass for the CA is set to 'test'. 
+
+CA was generated using the command below.
+openssl req -passout pass:test -new -x509 -days 36500 -extensions v3_ca -keyout ca_private.pem -out ca.pem -subj "/CN=CA/OU=MONGO/O=LETSGO/L=PHOENIX/ST=AZ/C=US"
+
+When testing, the x509 authentication is not necessary. KeyFile authentication (or in some cases nothing) is easier and perfectly acceptable.
+

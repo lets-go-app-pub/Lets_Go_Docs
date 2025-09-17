@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+
+package user_match_options;
+
+import "ReportMessages.proto";
+import "UpdateOtherUserMessages.proto";
+import "LoginToServerBasicInfo.proto";
+
+message UpdateSingleMatchMemberRequest {
+
+  LoginToServerBasicInfo login_info = 1;
+
+  //the single member the client wants to update
+  OtherUserInfoForUpdates chat_room_member_info = 2;
+}
+
+service UserMatchOptionsService {
+  rpc YesRPC(UserMatchOptionsRequest) returns (UserMatchOptionsResponse) {}
+  rpc NoRPC(UserMatchOptionsRequest) returns (UserMatchOptionsResponse) {} //NOTE: this will be used for report and block as well
+
+  rpc UpdateSingleMatchMember(UpdateSingleMatchMemberRequest) returns (UpdateOtherUserResponse) {}
+}
+

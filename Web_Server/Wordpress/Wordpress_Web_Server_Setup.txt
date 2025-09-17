@@ -1,0 +1,108 @@
+Web Server Setup (A VPS using CentOS 7 with cPanel and WHM on goDaddy)
+-cPanel Reference
+--https://docs.cpanel.net/knowledge-base/security/additional-security-software/
+-Migrate cPanel account if relevant
+--https://www.godaddy.com/help/migrate-a-cpanel-account-to-my-server-using-cpanel-and-whm-19396
+-Add the goDaddy user to wheel Group
+--go to WHM panel
+---On the left menu go to {Security Center | Manage Wheel Group Users}
+---add the user (was letsgoweb)
+-Install mongodb php driver
+--$ sudo /opt/cpanel/ea-php80/root/usr/bin/pecl install mongodb
+-Add Swap Space (added 4GB)
+--log in as non-root user (was letsgoweb)
+--https://www.digitalocean.com/community/tutorials/how-to-add-swap-on-centos-7
+-Raise PHP Memory limit
+--Go to WHM panel
+--On the left menu go to {Software | MultiPHP INI Editor}
+---Select PHP 8 (ea-php80)
+---raise memory_limit to 256M
+-Change SSH port
+--$ sudo vim /etc/ssh/sshd_config
+--add below (make sure Port 22 is disabled first)
+---Port 7827
+--$ /scripts/restartsrv_sshd
+-Setup firewall on WHM (it is a program called CSF, short for ConfigServer Security & Firewall)
+--log in as root
+--$ cd root
+--$ wget https://download.configserver.com/csf.tgz
+--$ tar -xzf csf.tgz
+--$ cd csf
+--$ ./install.cpanel.sh
+--go to WHM panel
+--On the left menu go to {Plugins | ConfigServer Security & Firewall}
+--Click 'Firewall Configuration' and setup below values
+---TESTING = Off
+---RESTRICT_SYSLOG = 3
+---SMTP_BLOCK = On
+---LF_SCRIPT_ALERT = On
+---SYSLOG_CHECK = 600
+---PT_ALL_USERS = On
+---NOTE: Below port 2224 is for a program called Nydus on goDaddy Servers. 61132 is for mongoDB. 7828 is the new SSH port.
+---Add to TCP_IN and TCP_OUT for IPV4
+----,2224,7828,61132
+---Remove from TCP_IN and TCP_OUT for IPV4
+----22,
+---Add to TCP_IN and TCP_OUT for IPV6
+----,2224
+---Remove from TCP_IN and TCP_OUT for IPV6
+----22,
+---Go to the bottom and push Change to restart the server and apply the settings.
+--On the left menu go to {Server Configuration | Tweak Settings}
+--Setup below values.
+---Enable BoxTrapper spam trap = Off
+---Max hourly emails per domain = 100
+---Hide login password from cgi scripts = On
+---Reset Password for cPanel accounts = Off
+---Reset Password for Subaccounts = Off
+---Go to the bottom and push Save to apply the settings.
+--On the left menu go to {Security Center | SMTP Restrictions}
+---Click Disable
+--On the left menu go to {System Health | Background Process Killer}
+---check all the boxes
+---click Save
+--On the left menu go to {Security Center | cPHulk Brute Force Protection}
+---Go to Countries Management
+----Select them all and blacklist them
+----Scroll down to United States and whitelist it
+---NOTE: This only blocks logins to the server, not access to the frontend of the website.
+---NOTE: The History Reports tab contains failed logins with useful info.
+--Check if there are any Security Concerns worth handling still
+---On the left menu go to {Plugins | ConfigServer Security & Firewall}
+---Click 'Check Server Security' and read through them to see if should be handled. 
+---NOTE: An addon domain (a type of service domain) is used as the cpanel account.
+--On the left menu go to {Server Configuration | Basic WebHost Manager Setup}
+---Go to the bottom and update the nameservers
+---Press Save Changes
+-Update Wordpress Password
+--Open Cpanel
+--Click Wordpress
+--Change password
+---Enter the same user password as before to get into wp-admin
+-Remove the goDaddy user to wheel Group
+--go to WHM panel
+---On the left menu go to {Security Center | Manage Wheel Group Users}
+---remove the user (was letsgoweb)
+-Install Composer
+--Log into the cPanel account from SSH
+--$ mkdir ~/composer
+--$ cd ~/composer
+--Follow below instructions to get a composer copy
+---https://getcomposer.org/download/
+-Move mu-plugin files to server
+-Move the web server .pem and the ca.pem file to the server under /ssl/pem
+--rename the webServer.pem certificate to mongodb-web-server-account.pem
+--change privileges of the certificate with the cpanel user
+---$ chmod 640 ~/ssl/pem/ca.pem ~/ssl/pem/mongodb-web-server-account.pem
+-Update /etc/hosts file
+--log into root user
+--add below to /etc/hosts
+{redacted} hostwinds
+{redacted} digitalocean
+{redacted} linode
+-Update MONGODB_URI_STRING in /home/q9926xw0l8qt/public_html/wp-content/mu-plugins/user-services-globals/user-services-globals.php to below
+mongodb://{redacted},{redacted},{redacted}/?replicaSet=letsGoRs&tls=true&maxPoolSize=1000&retryWrites=true&w=1&tlsCertificateKeyFile=/home/q9926xw0l8qt/ssl/pem/mongodb-web-server-account.pem&tlsCAFile=/home/q9926xw0l8qt/ssl/pem/ca.pem&authSource=$external&authMechanism=MONGODB-X509"
+
+
+
+

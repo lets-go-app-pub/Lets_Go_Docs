@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+option java_package = "error_message";
+
+import "ErrorOriginEnum.proto";
+
+message ErrorMessage {
+  ErrorOriginType error_origin = 1;
+  ErrorUrgencyLevel error_urgency_level = 2;
+  uint32 version_number = 3;
+  string file_name = 4;
+  uint32 line_number = 5;
+  string stack_trace = 6;
+
+  //these 2 values are only used when sending ErrorMessage from server to desktop interface
+  int64 timestamp_stored = 7;
+  string error_id = 8;
+
+  //the below 2 fields are only used when error_origin == ErrorOriginType::ERROR_ORIGIN_ANDROID
+  uint32 api_number = 9;
+  string device_name = 10;
+
+  string error_message = 11;
+}

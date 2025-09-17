@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+enum MatchType {
+  MATCH_TYPE_UNKNOWN = 0;
+  USER_ACCOUNT_MATCH = 1;
+  EVENT_MATCH = 2;
+}

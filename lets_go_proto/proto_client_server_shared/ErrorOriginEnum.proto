@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+option java_package = "error_origin_enum";
+
+enum ErrorOriginType {
+  ERROR_ORIGIN_UNKNOWN = 0;
+  ERROR_ORIGIN_SERVER = 1;
+  ERROR_ORIGIN_ANDROID = 2;
+  ERROR_ORIGIN_DESKTOP_INTERFACE = 3;
+  ERROR_ORIGIN_WEB_SERVER = 4; //NOTE: the web server does not have access to this enum so WEB_SERVER must stay value 4
+}
+
+enum ErrorUrgencyLevel {
+  ERROR_URGENCY_LEVEL_UNKNOWN = 0;
+  ERROR_URGENCY_LEVEL_MAX = 1; //use for errors that represent a security risk
+  ERROR_URGENCY_LEVEL_VERY_HIGH = 2; //use for errors that cause a crash
+  ERROR_URGENCY_LEVEL_HIGH = 3;
+  ERROR_URGENCY_LEVEL_MEDIUM = 4;
+  ERROR_URGENCY_LEVEL_LOW = 5;
+  ERROR_URGENCY_LEVEL_VERY_LOW = 6;
+}

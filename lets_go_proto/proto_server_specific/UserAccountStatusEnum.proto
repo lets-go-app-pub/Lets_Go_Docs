@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+// Be very careful about changing these values (don't). They are stored inside the database
+//  as ordinals and also used as part of the partial index for the algorithm.
+enum UserAccountStatus {
+    STATUS_ACTIVE = 0; //has collected all info
+    STATUS_REQUIRES_MORE_INFO = 1; //has begun the account creation, however not collected all info
+    STATUS_SUSPENDED = 2;
+    STATUS_BANNED = 3;
+}

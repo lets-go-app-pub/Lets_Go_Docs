@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package send_picture_for_testing;
+
+message SendPicturesForTestingRequest {
+  bytes send_bytes = 1;
+  bytes send_thumbnail = 2;
+}
+
+message SendPicturesForTestingResponse {
+  bool received_successfully = 1;
+}
+
+service SendPicturesForTestingService {
+  rpc SendPictureForTestingRPC(SendPicturesForTestingRequest) returns (SendPicturesForTestingResponse) {}
+}

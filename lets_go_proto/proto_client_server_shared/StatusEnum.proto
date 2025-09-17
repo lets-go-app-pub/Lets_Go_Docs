@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+option java_package = "status_enum";
+
+//IMPORTANT: -----These are tied to the LoginHelperFunction return values, 0-7 should never be changed-----
+enum ReturnStatus {
+  VALUE_NOT_SET = 0; //means no value was set, this would mean it got to the server, then the response was sent back, probably an alias for error
+
+  SUCCESS = 1; //successfully completed function
+
+  //login issues
+  LOGGED_IN_ELSEWHERE = 20; //login token exists with a different deviceID
+  NOT_ENOUGH_INFO = 21; //verified account does not have enough info (login process has not been completed)
+  LOGIN_TOKEN_EXPIRED = 22; //login token has expired
+  NO_VERIFIED_ACCOUNT = 23; //no verified account attached to this login exists
+  LOGIN_TOKEN_DID_NOT_MATCH = 24; //this means the installation ID matched however the loginToken did not (can happen if a token is sent after a long network downtime or with clock drift)
+  ACCOUNT_SUSPENDED = 25; //account was suspended
+  ACCOUNT_BANNED = 26; //account was banned
+  FUNCTION_CALLED_TOO_QUICKLY = 27; //function was called too quickly since last call and is still on cooldown
+
+  SUBSCRIPTION_REQUIRED = 28; //user account is not subscribed, however a subscription is required in order to call the function
+
+  //issues with passed parameters
+  INVALID_USER_OID = 40; //user id is invalid
+  INVALID_LOGIN_TOKEN = 41; //login token string passed by gRPC request is not a valid OID
+  OUTDATED_VERSION = 42; //outdated version of app used refuse to allow login
+  INVALID_INSTALLATION_ID = 43; //installation ID passed was invalid
+  INVALID_PARAMETER_PASSED = 44; //a parameter that was not part of LoginToServerBasicInfo was invalid
+  CORRUPTED_FILE = 45; //only used when passing a file, the file passed was corrupt
+
+  //general errors
+  DATABASE_DOWN = 60; //error on server
+  LG_ERROR = 61; //error on server
+
+  UNKNOWN = 80; //unknown problem (probably something wrong with server code)
+}

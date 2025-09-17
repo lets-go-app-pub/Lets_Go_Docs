@@ -1,0 +1,56 @@
+mongod --port 27017 --dbpath {redacted} --replSet rs0 --bind_ip localhost
+
+mongod --auth --replSet testReplicaSet --dbpath ~{redacted} --keyFile {redacted} --port 27017
+mongod --auth --replSet testReplicaSet --dbpath ~{redacted} --keyFile {redacted} --port 27018
+mongod --auth --replSet testReplicaSet --dbpath ~{redacted} --keyFile {redacted} --port 27019
+
+mongosh --port 27018 --eval 'db.adminCommand("shutdown")'
+mongosh --port 27019 --eval 'db.adminCommand("shutdown")'
+mongosh --port 27017 --eval 'db.adminCommand("shutdown")'
+
+mongosh --u rootUser --p pass --port 27017
+
+can turn on/off security in /etc/mongod.conf for access to users
+
+rsconf = {_id: "testReplicaSet", members: [{_id: 0, host: "localhost:27017"}, {_id: 1, host: "localhost:27018"}, {_id: 2, host: "localhost:27019"}]}
+
+db.adminCommand({getLog: "startupWarnings"})
+
+db.enableFreeMonitoring()
+https://cloud.mongodb.com/freemonitoring/cluster/{redacted}
+
+To change permission settings on new mongoDB folders
+$chown -R mongodb:mongodb /var/lib/mongodb
+$chown mongodb:mongodb /tmp/mongodb-27017.sock
+
+$sudo service mongod restart
+
+sudo systemctl start mongod
+sudo systemctl stop mongod
+
+Start PhpStorm
+sudo {redacted}
+npm install
+npm run start
+
+Start Desktop Interface
+{redacted}
+
+Connect to godaddy backend
+https://www.quora.com/How-do-I-access-SSH-in-GoDaddy-cPanel
+ssh {redacted}@{redacted}
+{redacted}
+
+Need to go to ~/Android/Sdk/platform-tools
+which adb
+can be changed ideally to above path
+ADB Emulator Commands
+adb kill-server
+adb start-server
+//sleep
+adb -s emulator-5554 shell input keyevent 223
+//wake up
+adb -s emulator-5554 shell input keyevent 224
+
+
+

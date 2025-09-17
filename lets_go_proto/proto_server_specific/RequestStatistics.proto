@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package request_statistics;
+
+import "LoginToServerBasicInfo.proto";
+import "AccountCategoryEnum.proto";
+import "UserAccountType.proto";
+
+message MatchingActivityStatisticsRequest {
+  LoginToServerBasicInfo login_info = 1;
+  bool include_categories = 2;
+  uint32 number_days_to_search = 3;
+  bool yes_yes = 4;
+  bool yes_no = 5;
+  bool yes_block_and_report = 6;
+  bool yes_incomplete = 7;
+  bool no = 8;
+  bool block_and_report = 9;
+  bool incomplete = 10;
+  repeated UserAccountType user_account_types = 11;
+}
+
+message NumberOfTimesActivityWasSwiped {
+  AccountCategoryType account_category_type = 1;
+  int32 activity_or_category_index = 2;
+  int64 number_times_swiped = 3;
+}
+
+message MatchingActivityStatisticsResponse {
+  bool success = 1;
+
+  //set if success == false
+  string error_msg = 2;
+
+  //set if success == true
+  repeated NumberOfTimesActivityWasSwiped activity_statistics = 3;
+}
+
+message AgeGenderStatisticsRequest {
+  LoginToServerBasicInfo login_info = 1;
+}
+
+message NumberOfTimesGenderSelectedAtAge {
+  uint32 age = 1;
+  uint64 gender_male = 2;
+  uint64 gender_female = 3;
+  uint64 gender_other = 4;
+}
+
+message AgeGenderStatisticsResponse {
+  bool success = 1;
+
+  //set if success == false
+  string error_msg = 2;
+
+  //set if success == true
+  repeated NumberOfTimesGenderSelectedAtAge gender_selected_at_age_list = 3;
+}
+
+service RequestStatisticsService {
+  rpc MatchingActivityStatisticsRPC(MatchingActivityStatisticsRequest) returns (MatchingActivityStatisticsResponse) {}
+  rpc MatchingAgeGenderRPC(AgeGenderStatisticsRequest) returns (AgeGenderStatisticsResponse) {}
+}

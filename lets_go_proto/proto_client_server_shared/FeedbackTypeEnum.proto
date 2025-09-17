@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+option java_package = "feedback_enum";
+
+enum FeedbackType {
+  FEEDBACK_TYPE_UNKNOWN = 0;
+  FEEDBACK_TYPE_ACTIVITY_SUGGESTION = 1;
+  FEEDBACK_TYPE_BUG_REPORT = 2;
+  FEEDBACK_TYPE_OTHER_FEEDBACK = 3;
+}

@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+option java_package = "prelogintimestamps";
+
+message PreLoginTimestampsMessage {
+  int64 birthday_timestamp = 1; //timestamp when birthday was last updated
+  int64 email_timestamp = 2; //timestamp when email was last updated
+  int64 gender_timestamp = 3; //timestamp when gender was last updated
+  int64 name_timestamp = 4; //timestamp when name was last updated
+  int64 categories_timestamp = 5; //timestamp when categories was last updated
+  //NOTE: when pictures timestamps are put in here, a repeated int64 they do not get returned to android properly, they just return a List of size 1 with the element equal to -1
+}

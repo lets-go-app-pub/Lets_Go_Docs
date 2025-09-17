@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+option java_package = "account_login_type";
+
+enum AccountLoginType {
+  LOGIN_TYPE_VALUE_NOT_SET = 0;
+  GOOGLE_ACCOUNT = 1;
+  FACEBOOK_ACCOUNT = 2;
+  PHONE_ACCOUNT = 3;
+}

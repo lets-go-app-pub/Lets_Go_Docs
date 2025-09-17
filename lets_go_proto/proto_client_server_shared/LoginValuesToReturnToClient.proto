@@ -1,0 +1,148 @@
+syntax = "proto3";
+
+option java_package = "login_values_to_return_to_client";
+
+import "RequestMessages.proto";
+
+message LoginValuesToReturnToClient {
+
+  enum LoginAccountStatus {
+    VALUE_NOT_SET = 0; //this is the default value and should only be set if a failure in gRPC occurred
+    LOGGED_IN = 1; //successfully logged in token is returned in login_token
+    ACCOUNT_CLOSED = 2; //message is displayed informing the user account closed; access status will also return if it was suspended or banned
+    REQUIRES_AUTHENTICATION = 3; //redirect to enter code for SMS verification function
+    OUTDATED_VERSION = 4; //outdated version of app used refuse to allow login
+    SMS_ON_COOL_DOWN = 5; //sms has some time remaining will be stored in sms_cool_down
+    REQUIRES_PHONE_NUMBER_TO_CREATE_ACCOUNT = 6; //means that google or facebook account was attempted to log into but no user account existed for it
+    INVALID_PHONE_NUMBER_OR_ACCOUNT_ID = 7; //could mean invalid phone number or accountID passed
+    INVALID_INSTALLATION_ID = 8; //invalid installation ID passed
+    INVALID_ACCOUNT_TYPE = 9; //invalid account type passed
+    VERIFICATION_ON_COOL_DOWN = 10; //too many sms verification messages have been sent by this user
+    FUNCTION_CALLED_TOO_QUICKLY = 11; //function was called too quickly in succession and is still on cooldown (currently unused)
+    UNKNOWN = 12; //this means the login function began however then didn't set it
+    DATABASE_DOWN = 13; //error with database on server
+    LG_ERROR = 14; //might want to try logging in again for this
+  }
+
+  //these the activities and categories will be extracted every time the user logs in
+  repeated ServerActivityOrCategoryMessage server_categories = 1;
+  repeated ServerActivityOrCategoryMessage server_activities = 2;
+
+  //this will return the index of the icons the user needs to update,
+  repeated int64 icons_index = 3; //index of icons that need updated
+
+  GlobalConstantsMessage global_constant_values = 4; //global constants extracted from server
+}
+
+message IndividualServerInfo {
+  string address = 1;
+  int32 port = 2;
+}
+
+message GlobalConstantsMessage {
+
+  //not passed
+  //int32 verification_code_number_of_digits = 6; //the number of digits in the login SMS verification code, needs to be known before login
+
+  //this value must be passed because the client uses it as a reference for when to refresh the login token
+  int64 time_between_login_token_verification = 1; //this is the time until the login expires expiration
+
+  int64 time_available_to_select_time_frames = 2; //this is the time that the user can select forward time frames in millis
+  int32 maximum_picture_size_in_bytes = 3; //the maximum size in bytes a picture can be (user & chat_message)
+  int32 maximum_picture_thumbnail_size_in_bytes = 4; //this is the maximum number of bytes (utf-8) for the picture thumbnail (user & chat_message)
+  int64 time_between_sending_sms = 5; //this is the time between sending SMS to the same phone number in millis
+
+  double max_between_time = 6; //this is the maximum time that time frames can be separated by to still be considered 'close' (it is a double for comparison purposes on client)
+  int32 activity_match_weight = 7; //matching algorithm weight for an activity match
+  int32 categories_match_weight = 8; //matching algorithm weight for a category match
+  int32 overlapping_activity_times_weight = 9; //matching algorithm weight for an overlapping timeframe in an activity match
+  int32 overlapping_category_times_weight = 10; //matching algorithm weight for an overlapping timeframe in a category match
+  int32 between_activity_times_weight = 11; //matching algorithm weight for a 'close' timeframe in an activity match
+  int32 between_category_times_weight = 12; //matching algorithm weight for a 'close' timeframe in a category match
+
+  int32 number_pictures_stored_per_account = 13; //this is the number of pictures each account can store
+  int32 number_activities_stored_per_account = 14; //this is the max number of activities each account can store
+  int32 number_time_frames_stored_per_account = 15; //this is the max number of time frames each activity can store
+  int32 number_gender_user_can_match_with = 16; //this is the number of genders the user is allowed to match with
+  int64 time_before_expired_time_match_will_be_returned = 17; //the amount of time in millis that will be subtracted from expired time before comparison is made
+
+  int32 maximum_number_bytes_trimmed_text_message = 18; //this is the maximum number of allowed bytes (utf-8 encoded) for a text message reply, any more than this, and it will be trimmed
+  int32 maximum_number_allowed_bytes = 19; //this is the maximum number of allowed bytes (utf-8) for simple strings such as gender and dialogs
+  int32 maximum_number_allowed_bytes_first_name = 20; //this is the maximum number of allowed bytes (utf-8) for the users first name
+  int32 maximum_number_allowed_bytes_user_bio = 21; //this is the maximum number of allowed bytes (utf-8) for the users bio
+  int32 maximum_number_allowed_bytes_user_feedback = 22; //this is the maximum number of allowed bytes (utf-8) for the users feedback
+  int32 maximum_number_allowed_bytes_error_message = 23; //this is the maximum number of allowed bytes (utf-8) for the error string
+  int32 maximum_number_allowed_bytes_text_message = 24; //this is the maximum number of bytes for a utf-8 encoded string allowed for a chat text message
+
+  int32 highest_displayed_age = 25; //this is the maximum age displayed to the user
+  int32 highest_allowed_age = 26; //this is the maximum allowed age the user can be
+  int32 lowest_allowed_age = 27; //this is the minimum allowed age the user can be
+  int64 maximum_time_match_will_stay_on_device = 28; //after a match has been 'extracted' from the device this is the amount of time it will stay cached on the android device before it is removed
+  int32 minimum_allowed_distance = 29; //this is the minimum allowed distance a user can match in miles
+  int32 maximum_allowed_distance = 30; //this is the maximum allowed distance a user can match in miles
+
+  int32 maximum_number_response_messages = 31; //this is the maximum number of matches allowed to be called from the server by find matches
+
+  int32 maximum_number_chat_room_id_chars = 32; //this is the maximum number of chars a chat room id will be
+  int32 maximum_chat_message_size_in_bytes = 33; //this is the maximum number of bytes (utf-8) for the chat message thumbnail, used for reply messages
+  int32 maximum_chat_message_thumbnail_size_in_bytes = 34; //this is the maximum number of bytes (utf-8) for the chat message thumbnail, used for reply messages
+  int64 time_between_chat_message_invite_expiration = 35; //used to decide time before chat message invite type expires
+
+  uint32 chat_room_stream_number_times_to_refresh_before_restart = 36; //this is the time before the chat stream will hit its deadline and time out
+  int64 chat_room_stream_deadline_time = 37; //this is the time before the chat stream will hit its deadline and time out
+  int32 max_number_messages_to_request  = 38; //maximum numbers messages the user can request at a time in bi-di stream and updateChatRoom, also number of full messages sent back with joinChatRoom()
+  int64 time_info_has_not_been_observed_before_cleaned = 39; //amount of time before messages and members will have their 'extra' info trimmed for memory management
+
+  uint32 activity_icon_width_in_pixels = 40; //width of activity icon in pixels
+  uint32 activity_icon_height_in_pixels = 41; //height of activity icon in pixels
+  uint32 activity_icon_border_width = 42; //width of the circle border that goes around an un-selected icon
+  uint32 activity_icon_padding = 43; //the 'padding' around the icon; NOTE: this is NOT related to the android 'padding' attribute
+  string activity_icon_color = 44; //the unselected icon and border color
+  string activity_icon_background_color = 45; //the unselected icon background color
+
+  int32 image_quality_value = 46; //this is the quality that the image will retain when compressed (must be a number between 0 and 100)
+  int32 picture_maximum_cropped_size_px = 47; //this is the maximum height or width pictures will be cropped to
+  int32 picture_thumbnail_maximum_cropped_size_px = 48; //this is the maximum height or width in pixels the thumbnail will be saved as
+
+  int64 time_between_updating_single_user = 49; //time between checking individual users for picture updates (mainly used when user joins a chat room and updateChatRoom() is called)
+  int64 time_between_updating_single_user_function_running = 50; //time between updateSingleChatRoomMemberInfo() inside ApplicationRepository.kt running for a specific user
+
+  int32 chat_message_image_thumbnail_width = 51; //this is the width in pixels of the thumbnail that will be sent when a reply is used for a chat message
+  int32 chat_message_image_thumbnail_height = 52; //this is the height in pixels of the thumbnail that will be sent when a reply is used for a chat message
+
+  int64 connection_idle_timeout_in_ms = 53; //the time passed to idle timeout for the grpc channel on the client (also used on server)
+
+  repeated string mime_types_accepted_by_server = 54; //these are mime types accepted by the server
+
+  repeated IndividualServerInfo server_info = 55; //raw server info for all servers
+
+  string app_url_for_sharing = 56; //a string that is the url of the app on the play store, used for sharing to other users
+
+  int32 max_server_outbound_message_size_in_bytes = 57; //the maximum number of bytes the server will ever send back in a single message
+
+  int64 time_to_request_previous_messages = 58; //the time to request previous message when chat stream is initialized
+
+  int64 maximum_meta_data_size_to_send_from_client = 59; //the maximum size to make meta data send during the chat stream initialization
+
+  //This is the time after a match expires that it is removed from the device and from USER_CREATED_EVENTS. This is
+  // only relevant to user created matches from USER_CREATED_EVENTS. Not to events stored as matches or inside chat
+  // rooms.
+  int64 time_after_expired_match_removed_from_device = 60;
+
+  //The below are default values expected to be sent to the client from a chat room header if the respective fields
+  // are not set (not an event chat room).
+  string event_id_default = 61;
+  double pinned_location_default_longitude = 62;
+  double pinned_location_default_latitude = 63;
+  string qr_code_default = 64;
+  string qr_code_message_default = 65;
+  int64 qr_code_time_updated_default = 66;
+  int64 event_user_last_activity_time_default = 67;
+
+  int32 maximum_number_allowed_bytes_event_title = 68;
+
+  string event_gender_value = 69;
+  int32 event_age_value = 70;
+
+  string admin_first_name = 71;
+}

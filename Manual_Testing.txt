@@ -1,0 +1,354 @@
+TESTING BASICS 
+-NOTE: test on min API (API 21) too
+-NOTE: Make sure leak canary and valgrind are on.
+-NOTE: Test rotating each Fragment.
+-MatchScreenFragment (and UserInfoCard)
+--swipe yes on match (actually drag the card, clicking the button is done by automated tests)
+--swipe no on match (actually drag the card, clicking the button is done by automated tests)
+--swipe yes on event
+--try each block & report option
+--click on picture and make sure can swipe back and forth
+--try drop down menus
+---look for an overlapping time
+---look for a close time
+---look for a time that is neither overlapping or between
+---look for anytime
+--try left and right arrows to change picture observed
+--remove a user's picture from the cache and make sure it can update
+--swipe a match away when offline (it should send them again when login retries; unsentSimpleServerCommandsDataSource.insertMessage)
+--when run of swipes make sure timer properly displays and counts down (move away and back to see errors)
+--Because the layout view_user_info_card_time_frame.xml only contains a single bar, make sure that multiple timeframes that overlap a single timeframe or multiple 'close' timeframes do not crash (there is a NOTE in optimizations_after to add this feature later). For example user is 5:00->6:00 and 7:00->8:00 and match is 4:00->9:00. And vice versa, if the match has 2 'inside' of the user. Also with between times something like user 4:00->5:00 and 8:00->9:00 and match is 6:00->7:00.
+-MatchMadeScreenFragment
+--properly displays user
+--looks decent (the title has very large font, so it could be a bit oversized)
+--'keep swiping' and back button will send user back to matching screen
+--'send message' and clicking user picture will take user to chat room
+--shows 'Event Joined' for events and 'Match Made' for users
+-ProfileScreenFragment
+--test pushing share
+--test all types of feedback
+--click activities
+--click user profile
+-ModifyProfileScreenFragment (also SelectPicturesFragment & SelectGenderFragment)
+--make sure top bar looks ok
+--long click a picture to pop it out & make sure can scroll through multiple pictures
+--add a picture (click a later spot, say spot 3 and make sure it adds to spot 1 or 2)
+--make sure when picture index 0 is updated, profile screen is updated too
+--replace a picture
+--test setting 'matching by' "sBo"
+--test setting 'bio' (force emojies and numbers and junk) "sBi"
+--test setting 'city' (make sure only letters and spaces are allowed here) "sCn"
+--test setting 'age range' "aAr"
+--test setting 'max distance' "iMd"
+--test setting 'email address' "sEa","bEv"
+--test setting 'gender' (male, female and a gender other try $ sign in front) "sGe"
+--test setting 'genders to match with' (make sure each one works to $ in front of gender other) make sure check marks work properly, especially with 'everyone' option removing other things "aGr"
+--make sure age range does not go below 18 for people 20+
+--test setting 'opt into promotional emails'
+--test Log Out
+--test Delete
+-SelectCategoriesFragment
+--make sure top bar looks ok
+--drop down menus work
+--can add an activity
+--if max activities reached, cannot add more
+--can remove an activity (from start, end and middle)
+--dates set properly
+--times set properly
+--cannot add a time in the past
+--cannot add a time too far in the future
+--end time cannot come before start time
+--overlapping times combine
+--saving zero activities doesn't work
+--make sure min age on activities and categories works
+-MessengerScreenFragment (and ChatRoomsListFragment)
+--Matches recycler view
+---new matches properly added
+---when 'unmatch' is used match is properly removed
+---clicking on a match will take to a properly formatted chat room (enabled with the UserInfoCard)
+---if a message is sent from a match to initiate conversation, it is turned into a chat room
+--Chat Rooms recycler view
+---the 4 options listed below are properly shown in the menu
+---'new chat room' works
+---'join chat room' works
+----join an event chat room
+----join a normal chat room
+---'search' works
+---all 4 'sort by' options work
+---long click options work (leave chat room)
+---can click on a message and be sent to a properly formatted chat room
+---check if new message(s) sent chat room properly updates
+---check user kicked/banned from chat room
+---make sure that if a user is not blocked, the red dots and most recent message update
+---make sure that if a user is blocked, messages do NOT update
+---check if a message update is requested, the final message is properly updated (for example when log out then log back in and click messenger fragment)
+---new events properly added after swiping 'yes'
+-ChatRoomFragment
+--make sure messages will update
+--remove a picture from the cache and make sure it can update
+--remove a gif from the cache and make sure it can update
+--corrupt a picture in the cache and see what happens
+--send text message
+--send picture message
+--send location message
+--send mime type message (gif and sticker)
+--send invite message
+--replies (do all the combos, there are 5 reply types and 5 active message types, try all 25 combos)
+--make a chat message where the first values are all white space, then reply to it (all values inside the reply should be white space)
+--join and leave the chat room with all 25 combos & 5 basic messages in order to make sure they all download properly
+--view all 25 combos & 5 basic messages with another user to make sure formatting is correct
+--click an invite message that is valid
+--click an invite message that is invalid (chat room info changed maybe)
+--click on a picture/gif and make sure it pops out
+--try a very long and very short text message
+--edit a text message
+--edit a text message to empty and see if it deletes it
+--delete current user message for self w/o admin
+--delete current user message for everyone w/o admin 
+--delete current user message for self w/ admin
+--delete current user message for everyone w/ admin
+--delete other person's message w/o admin (should be a 'delete for self')
+--delete other person's message for self w/ admin
+--delete other person's message for everyone w/ admin
+--kick current user
+--kick a 3rd user
+--ban current user
+--ban a 3rd user
+--have different user join chat, should see message AND number members updated
+--have different user leave chat, should see message AND number members updated
+--promote current user to admin (make sure old menus vanish and new menus reflect admin)
+--promote 3rd user to admin
+--receive update chat room name (top bar too)
+--receive update chat room password
+--receive new pinned location
+--receive removed pinned location
+--make sure 'leave chat room' works
+--make sure 'clear history' works
+--make sure 'block & report' from popup menu works
+--make sure 'invite' from popup menu works
+--make sure 'promote to admin' from popup menu works
+--make sure 'kick' from popup menu works
+--make sure 'ban' from popup menu works
+--click top bar and make sure sends to ChatRoomInfo
+--click top bar and make sure it DOESN'T send to ChatRoomInfoMatch on match made
+--make sure sending the 5(or 4?) types of messages text,picture,mime, location, invite(?) clear match made
+--make sure 'unmatch' works for match made
+--make sure 'block & report' on top bar works for match made
+--remove a user's picture from the cache and make sure it can update in match made
+-SelectChatRoomForInvite (ChatRoomsListFragment was tested above)
+--Make sure that only 'search' and 'sort' show up in dropdown menu
+--Make sure that all the possible invite locations show up
+-SelectLocationScreenFragment
+--try to change layers
+--move location make sure the address changes
+-ChatRoomInfoFragment
+--make sure a non-admin user cannot see admin fields (other users' menu items, edit buttons, and pinned location if it doesn't exist)
+--Make sure 'notifications' sets value properly in database
+--send update chat room name
+--send update chat room password
+--send new pinned location
+--remove pinned location
+--receive update chat room name (top bar & name should change)
+--receive update chat room password
+--receive new pinned location
+--receive user leave chat room
+--receive user joined chat room
+--receive admin promoted
+--make sure 'leave chat room' works
+--make sure 'clear history' works
+--make sure 'block & report' from popup menu works
+--make sure 'unblock' from popup menu works
+--make sure 'invite' from popup menu works
+--make sure 'promote to admin' from popup menu works
+--make sure 'kick' from popup menu works
+--make sure 'ban' from popup menu works
+--make sure can click on another user element and go to ChatRoomMemberFragment
+--make sure another user promoted to admin when admin leaves
+--make sure when first user joins an already created chat room they are admin
+--Event Chat Room
+---make sure the 'Event Admin' exists as a member and their card and name are properly formatted
+----Their name should have spaces between the words
+----The age should be hidden
+----They should have the same activity as the event
+---check if the 'Event QR Code' is displayed when it exists
+----On the DisplayQRCodeFragment make sure the QR Code is shown and the QR Code Message is shown if it is set.
+---Make sure that when the event expires AND when it is canceled
+----QR Code is hidden
+----Event spot is visible in ChatRoomInfoFragment but shows 'Event Completed' or 'Event Canceled' and is not clickable
+----On the ChatRoomListFragment the chat room rules revert to the normal chat room rules for what is shown
+-ChatRoomMemberFragment
+--make sure 'block & report' from top menu works
+--make sure 'invite' from top menu works
+--receive update chat room name (top bar & name should change)
+--remove a user's picture from the cache and make sure it can update
+-LoginSelectMethodFragment
+--login with phone number
+--login with Facebook
+--login with Google
+--login to an existing phone number with a Google/Facebook account (attach the account)
+-LoginGetPhoneNumberFragment
+--enter invalid phone number
+--enter valid phone number
+-VerifyPhoneNumbersFragment
+--make sure send new verification code works (and stays greyed out)
+--enter invalid code
+--enter valid INCORRECT code
+--enter valid CORRECT code
+--make sure cannot go BACK to this fragment
+-LoginGetEmailFragment
+--enter invalid email
+--enter valid email
+--navigate back to this fragment and change email
+--make sure google/facebook input the email automatically
+-LoginShowRulesFragment
+--make sure properly scrolls
+-LoginGetBirthdayFragment
+--try a month less than 10, and a day less than 10 (it checks for string size of 10)
+--enter too young of a birthday
+--make sure cannot enter too old of a birthday (try setting a month and day before the oldest possible then turning the years back)
+--enter a valid birthday
+--navigate back to this fragment and change birthday
+-LoginGetNameFragment
+--make sure can only enter letters (no spaces, numbers)
+--make sure capatilizes first letter, and lower case everything else
+--enter empty name
+--navigate back to this fragment and change name
+-LoginGetGenderFragment
+--make sure can select all 3
+--try to enter an empty gender for 'other' should show error message
+--make sure clicking radio buttons clears above error message
+--navigate back to this fragment and change gender
+-LoginGetPicturesFragment
+--try to set 0 pictures
+--set all 3 pictures
+--navigate back to this fragment and change picture
+-SelectCategoriesFragment (for Login, most functionality should be tested above)
+--try to set no categories
+--make sure cannot navigate back to login activity
+
+-NOTIFICATION TESTING (ChatStreamWorker)
+-NOTE: Check notification badge on the icon when present
+-test text message
+-test picture message
+-test location message
+-test mime type message
+-test invite message
+-test edited message, message NOT displayed in previous message notification
+-test edited message, message displayed in previous message notification
+-test deleted message, message NOT displayed in previous message notification
+-test deleted message, message displayed in previous message notification
+-test current user kicked message
+-test other user kicked message
+-test current user banned message
+-test other user banned message
+-test other user joined message
+-test other user left message
+-test chat room name updated message
+-test chat room password updated message
+-test new pinned location message
+-test new admin promoted message
+-test match made
+-test match canceled message
+-test notifications on/off for a chat room and it only affects that chat room
+-test more than 1 person sending a message in a single chat room
+-make sure that if a user is blocked, the message is not displayed
+-clicking notification sends to chat room
+-make sure that the different message types can be re-built from the shared preferences string (can read about it on function compareSharedPreferencesListWithCurrentList()) In order to stop it can just swipe the app away, this will close the entire app, then the ChatStreamWorker will start a bit after that.
+--make sure text messages can be rebuilt
+--make sure 'normal' messages work (pic, location, gif etc...)
+--make sure match made can be rebuilt (this is an edge case in implementation)
+--make sure can rebuild messages from multiple chat rooms
+--make sure can rebuild messages from multiple users in same chat room
+-CleanDatabaseWorker
+--set a message info to be 'outdated' (so it can be removed) (CleanDatabaseWorker_)
+--set a 'mime type message' to be 'outdated' (so it can be removed)
+--set an 'other user info' to be 'outdated' (so it can be removed)
+--test with nothing outdated
+
+-LOCATION TESTING
+--make sure the user can deny location access
+
+-EMAILS TESTING
+--use 'trouble logging in?' to change the phone number
+--test verify email
+
+SMS TESTING
+--make sure an sms is properly sent for user verification (need a real device)
+
+NETWORK TESTING
+-NOTE: If problems occur with the NETWORK testing, check these out
+--idleTimeout()
+--keepAliveTime()
+--https://grpc.github.io/grpc-java/javadoc/io/grpc/ManagedChannelBuilder.html#keepAliveWithoutCalls-boolean-
+-NOTE: make sure to test this NOT on a LAN connection, ideas (DOES THE BI-DIRECTIONAL STREAM 'KNOW' IT has been cancelled)
+-internet goes down (past the refresh time I guess? AND not past the refresh time)
+-invalid login token (I guess the login expires)
+-deadline time passed for login function
+-all servers go down
+-I have 2 servers and 1 goes down
+-Deep Doze
+--it runs works going into and out of maitenence
+--https://developer.android.com/training/monitoring-device-state/doze-standby#:~:text=If%20a%20user%20leaves%20a,network%20and%20CPU%2Dintensive%20services.
+--https://medium.com/@mohitgupta92/testing-your-app-on-doze-mode-4ee30ad6a3b0
+--https://stackoverflow.com/questions/36457524/can-not-switch-to-doze-mode
+--MAYBE (where login token is expired, and the uptimeMillis has not been properly updated to reflect it)
+-Make sure reconnects when airplane mode is turned on/off
+-test offline in various parts of the app specifically the chat room (clicking on a chat room to navigate to chatRoomFragment and navigating inside, sending messages etc.)
+
+ADVANCED TESTING
+-leave one server up at a time and make sure device can still connect (only Android, the desktop interface connects to one specificially)
+-take down all servers and make sure device gracefully handles it
+-press home when initial login screen and blank loading screen are displayed, make sure it still works
+-install app while screen is still off (all black), make sure it doesn't break and properly continues
+-make sure if User A logs into an account User B is currently logged into it gracefully kicks User A off, and then kick User B off using user A
+-test joining a matching chat room with a 3rd user before users have msged each other (should not allow the user to join)
+-test try canceling a match then joining the chat room with a 3rd user (should function like a chat room)
+-uninstall and reinstall and make sure delete 'sticks' (meaning the account is actually deleted on the server and cannot log back in to it)
+-make sure cannot have popup menu for a message that has not been sent to server
+-make sure when changing primary picture, thumbnail is updated for other users.
+-when opening the camera in ChatRoom make sure that
+--receiving a message works all right (ChatStreamObject stays subscribed)
+-corrupt a picture inside the database, check and make sure things don't crash and other users can't see it (need to make it an invalid image AND keep size consistent, consistent size is expected)
+-PICTURES TESTING (and how thumbnails update when deleting a picture from desktop interface)
+-test if chat room thumbnail is retained during update
+--1) user A creates chat room 1,
+--2) user A sends a message in chat room 1 (so other user can see thumbnail)
+--3) user A leaves chat room 1 (chat room is empty now)
+--4) user A changes their thumbnail
+--5) user A creates chat room 2
+--6) user A sends a message in chat room 2 (so other user can see thumbnail)
+--7) user A leaves chat room 2 (chat room is empty now)
+--8) user B joins chat room 2
+--9) user B joins chat room 1
+--the chat room 2 thumbnail is the most recent and so it should be retained
+--Make sure the dialog requesting POST_NOTIFICATION permission works properly on API 33 and API 32 (it should ask for the permission on API 33 and send to the setting screen if notifications are off on API 32)
+-When using the release version, minimize the app using the home button, then use the icon to open it, it should NOT restart the app or go through the LoginActivity.
+
+DESKTOP INTERFACE
+-update user info (name birthday etc...) and make sure it works
+-remove a normal picture, user not in any chat rooms (the chat room saved thumbnail should be updated)
+-remove a normal picture when in 1 chat room (make sure chat room oid is updated)
+-remove a picture when in multiple chat rooms
+-test removing a picture when a user deletes their account (should still remove thumbnails from stuff)
+-on android test and make sure no errors when viewing [empty, pic, empty] [empty, empty, empty] [pic, empty, pic], test and make sure that can view these in all places as well
+-test shutting down a server and making sure the client can adjust appropriately
+
+WEB SERVER
+-Email Verification (make sure doc is deleted regardless)
+--invalid verification code (too short/long VERIFICATION_LINK_EXPIRED)
+--document not inside database (VERIFICATION_LINK_EXPIRED)
+--document is expired (VERIFICATION_LINK_EXPIRED)
+--email address inside user account is different than inside VerificationEmailInfo collection (EMAIL_ADDRESS_DOES_NOT_MATCH)
+--successfully updated email (requires verification key updated, email timestamp updated, statistics doc USER_ACCOUNT_STATISTICS_EMAILS_VERIFIED_KEY updated, AUTHORIZATION_SUCCESSFUL)
+-Account Recovery
+--invalid phone number entered (should not submit, the html should catch this)
+--invalid verification code (too short/long VERIFICATION_CODE_HAS_EXPIRED_MESSAGE)
+--document not inside database (VERIFICATION_CODE_HAS_EXPIRED_MESSAGE)
+--document is expired (VERIFICATION_CODE_HAS_EXPIRED_MESSAGE, doc deleted)
+--incorrect phone number entered (form with error message: PHONE_NUMBER_DOES_NOT_MATCH_MESSAGE)
+--incorrect phone number entered too many times (TOO_MANY_ATTEMPTS_MADE_MESSAGE, doc deleted)
+--phone number already exists (form with error message: PHONE_NUMBER_ALREADY_EXISTS_MESSAGE)
+--successfully updated (INFO_STORED_AFTER_DELETION_COLLECTION account updated, pending account removed for both numbers, statistics doc USER_ACCOUNT_STATISTICS_PHONE_NUMBERS_KEY and USER_ACCOUNT_STATISTICS_ACCOUNT_RECOVERY_TIMES_KEY updated, SUCCESSFULLY_UPDATED_MESSAGE, doc deleted)
+---WITH INFO_STORED_AFTER_DELETION_COLLECTION account existing for new number
+---WITHOUT INFO_STORED_AFTER_DELETION_COLLECTION account existing for new number
+

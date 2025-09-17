@@ -1,0 +1,242 @@
+
+only a single database.withTransaction can run at a time, this is almost the same thing as putting a mutex around the entire database (although
+individual commands should still be able to run), maybe make it more efficient; this has been made more efficient by using multiple databases
+however the android documentation recomends only 1 room database per app, check which is more efficient
+
+add liveData to the database, it would help with things like age being updated on login (would keep it consistent)
+
+animations when switching screens.
+
+when user1 swipes yes on user2 and user2 already swiped yes on user1, user2 is removed from the client database, however this does not have to be the case 
+when the other user swiped yes == true this user will delete the user then immediatly have to download them again when they get the chat room back, this could be optimized to retain
+the user, however a system will need to be put in place for it to remove them if an error happens so that a memory leak does not occur with
+a user just sitting there forever
+
+inside handleUpdatedMessages() inside ChatRoomFragment.kt, sendUpdateUserObservedChatRoom() is needed when not an initialization message and recycler view has already been initialized. However I am not convinced that I need to updated observed time for EVERY message or group of messages
+
+The way the chat room works is a bit clunky. It would be much better to separate it naturally into a 'group' of fragments for each chat room. Then instead of running retrieveMessagesForChatRoomId() at the end of ChatRoomFragment.kt and retrieving the messages every time (then clearing them at the end), I could store and update them on the other chat room screens as well. I could have retrieve messages run with updateChatRoomMembers() and save a little time I think.
+
+look at the Android Studio project CoroutineThreadingToys, there are several improvements to be made to these
+
+The chat stream server uses a thread pool that is separate from the 'normal' server this might be able to be combined.
+
+Can add more of the chat room commands into the bi di stream such as client_message_to_server and updated_chat_room
+
+make the mongodb_oid_concurrent_container have ways of using try_lock then returning false and storing inside a vector and iterating over it. This could be
+used inside of the chat message change stream to skip any that are locked then store the missed ones in a vector and go back later to save(?) some time.
+
+logging system
+
+can make PICTURE_MESSAGE and MIME_TYPE_MESSAGE display the picture when they are sent in notification and chat room list
+
+can make the chat room list handle MESSAGE_DELETED and MESSAGE_EDITED
+How to Request Permissions in Android Application?
+
+might want to make a separate error so the user can be informed their internal storage is full; 'write failed: ENOSPC (No space left on device)' (low priority optimization,
+ the device isn't going to work well if the user doesn't have a few Mb to download a file)
+
+block & report for chat rooms just kind of leaves the user hanging while the message is being sent, some form of progress would be preferable
+
+set a custom picture for the chat room; 
+NOTIFICATIONS (extends above) also use that picture for displaying the 'single' messages inside of ChatStreamWorker Notifications because the 'Person' object needs to take an image (can use an empty drawable but there is no differentiation between messages that way, a single message looks like it is sent by the most recent user) 
+
+automatically get city based on location(not sure why other apps don't do this)
+
+app never starts again after force stop is pressed, people say it is impossible to 'fix' this, however google has several apps that do it, maybe they need to start each other or something?
+
+can optimize memory management with protocol buffers in c++ https://developers.google.com/protocol-buffers/docs/reference/arenas#example specifically Swap()
+
+on the server inside of utility_general_functions.cpp deleteAccountPictures() this is a terribly slow way to do this (I think), a better way is to extract all OID that need deleted then 'move' them to the other collection; I don't know if this can be done in one command, however I know that the aggregation command $merge can write them all and then delete_many can delete them, need to figure out how to get the thumbnail during all of that too
+
+look into mongoDB indexing, indexes work best if they are loaded into RAM or something (with some exceptions) however because RAM usage seems to be a problem for mongoDB (at least according to discord) documentation is here https://docs.mongodb.com/manual/tutorial/ensure-indexes-fit-ram/
+
+make it so when long clicking on the current user's pictures, it will inflate a fragment to display it full screen (can probably refactor UserInfoCard system for it)
+
+when the user navigates to the messenger screen
+
+The way that Signal handles emojis, stickers and gifs (something about Gify?) is better than mine
+
+ANYTIME can be updated to running once an hour where ALL user timeframes are updated, this will allow each algorithm to NOT have to individually match AND it will allow extendability to timeframes of say every Weds at 5:00 PM, NOTE: this will need to be a program separate from the actual C++ server process because those are clones that will run on each server and the update should only happen ONCE (not once per server)
+
+Could make a separate server on the C++ Server to take commands from the Desktop Interface. That way a different SSL can be used that no one has access to.
+
+Allow pictures to have nothing inside of them and handle this situation on Android
+
+Need to set up admin stuff better, the people doing the banning will need minimal ability to change user accounts (they still need to be able to update text that is bad and remove innapropriate pictures) AND each of these actions will need to be logged somewhere
+
+On the server I went out of my way to throw exceptions, however THEN I removed the exceptions and made them automatically throw the  mongocxx::operation_exception to an implementation function while only handling the mongocxx::logic_error, so is throwing the exceptions even necessary? I don't think it is because logic_errors are on my side
+
+implement ACCOUNT_STATE_IS_SUPER_ADMIN for the desktop interface
+
+on the desktop interface inside feedback, it would probably be useful to return the total number of feedback the specific user has sent (might just store it in the database) so the admin can take it into consideration
+
+on the desktop interface it would be good to be able to view chat rooms
+
+on the server, pictures themselves aern't actually decoded and checked for their size, so clients could use some foolery here to exploit that
+
+IDEA: group chat rooms associated with each activity, will need some kind of moderation (community driven would be ideal)
+
+inside of UserInfoCard.kt for Andorid inside of setupPictures() it will essentially request the picture every time when a user has no pictures associated with their
+ account (say the last one was deleted) might want to look into this? not sure db.enableFreeMonitoring() (the command seems to generate the same link but has to be enabled  every time)
+ 
+setup ErrorUrgencyLevel for the Server Errors
+
+remove the entire idea of 'error_collection_names' from the server, and (if I didn't write it already) add error_urgency enum values to the server errors
+
+on the desktop interface; when extracting a single user info the times that the matches occur could be useful information, however in order for it to be reasonable the timezone that each individual calls their swipe from (I think where they call their swipe from is the best place anyway) will need to be stored with the swipe itself
+
+on server maybe don't store the report if the user is already suspended/banned (maybe remove all reports when user is suspended/banned)
+
+it would be nice to have a statistic for how many button presses each user does
+it would be nice to have a statistic for how long each user is on the app for (would probably need to see pause/resume for application and set a timer or something)
+
+transitions between image popping out (when clicking user picture or a picture/mime type message)
+
+look at c++ chat stream performance https://grpc.io/docs/guides/performance/ (the C++ section specifically has some things I don't understand and probably didn't do)
+
+my program relies on a lot of global variables, they might be inefficient , found a quote on stack overflow "This saves you from initialization order issues (read Effective C++ item #4)"
+
+maybe put schema validation in for the user account collection, I skipped it because it may be slow and the server checks everything anyways, I put it
+onto the FreshErrorsCollection so I can measure performance of it later though
+
+On the client the sendMessage is mutex locked now and so it could take a long time to send all the 'unsent' messages. Might want to bundle them somehow (make sure they don't get larger than the server max receive message size).
+
+The app will need to be submitted for facebook review, however I can extract more facebook fields from their account and save them to make the login process smoother. https://developers.facebook.com/docs/permissions/reference#p
+
+maybe look into Android sync adapters for sync? although the foreground activity part is important for keeping the app alive
+
+I don't need a new collection for user_account_keys::STATUS because I have a partial index for STATUS and MATCHING_ACTIVATED. However what might be nice is to have a variable that is set to something like 'ACCOUNT INACTIVE AFTER TIME' then for it to be set to false. I would probably need a separate program to run occasionally, however this would help keep inactive accounts out of the matching pool.
+
+Look into trying to manually make a geospatial index or some way to access mongoDBs way of doing it. Because searching for a distance based on maxdistance inside the matching user's account doesn't seem index-able. Right now it will run this AFTER the compound index is checked, it has to check every document individually (it has to do that anyway for OTHER_USERS_BLOCKED, but some more selectivity before OTHER_USERS_BLOCKED is checked would be nice)
+
+Inside of displaying time frames for overlapping and between times on the UserInfoCard if the user has say 2 timeframes that are inside of a single timeframe for the match, then it will split them up. It would look nicer if they were combined. For example user is 5:00->6:00 and 7:00->8:00 and match is 4:00->9:00. And vice versa, if the match has 2 inside of the user. Also with between times something like user 4:00->5:00 and 8:00->9:00 and match is 6:00->7:00. None of these can work because the layout 'match_time_frame.xml' only contains and can ever contain a single colored bar, so this will have to be extended somehow. Expanding on this it will list all of the match times, so the user times fitting 'inside' or 'around' the match times would be the main concern. However doing some exception where multiple are overlapping/outside for a user time would be nice too.
+To perhaps expand on this more, I think a good idea would be to put each time inside of 'overlapping times' only once and then again inside 'between times' if relevant. A good idea may be to put all the times together on a single bar, then remove times and allow the bars to be clicked and have a popup window with the time the bar represents. PROS: The end product would look cleaner. CONS: A very small bar may be very hard to click. It would be harder to instantly compare times, would need to remember each one that pops out.
+
+Inside LoginFunctions on client runLoginAfterDelay() will run the load balancing every time when SERVER DOWN is detected. This means every ~5 seconds (the time MUST be sorter than the Light Doze maintenance window) it will create enough managed channels to connect to each server. Try to find a way around this I think. The channels are supposed to be fairly 'expensive' to create and 'cheap' to maintain.
+
+Inside of ChatMessageAdapter.kt setUpMessageTimestamp() is called every time the recycler view scrolls. There is no reason for this really, the MessageDataEntity could simply have fields for YEAR/MONTH/DAY/HOUR etc... stored inside of it so they could be quickly referenced.
+
+Google is now switching from their current method of signing in to a 'Google Identity Services' https://developers.google.com/identity/sign-in/android/sign-in-identity. Instead of https://developers.google.com/identity/sign-in/android/sign-in. They mention that eventually the old method will become obsolete. I tried switching over to this once however while it worked perfectly fine connecting to a Web Server OAuth (In fact when I pushed the little 'Configure a project' button in the 2nd link it MADE ME ONLY A Web Server) I can't get it to connect to an Android OAuth. Below is a code snipet that might help.
+Identity.getSignInClient(requireActivity())
+                        .getSignInIntent(request)
+                        .addOnSuccessListener { result ->
+                            try {
+                                beginGoogleSignInZ.launch(IntentSenderRequest.Builder(result.intentSender).build())
+                            } catch (e: ActivityNotFoundException) {
+                            
+Inside of ChatStreamObject.kt there are a bunch of possible errors inside of sendMessage() (the custom exception of InvalidMessagePassedException for convertMessageDataEntityToTypeOfChatMessage() may be more useful). However the way they are handled is simply to log the user out. It would be better if the individual message was deleted from the database and updated on the ChatRoomFragment somehow (might be able to set deleteType to DELETED_ON_CLIENT, this will make the layout be an EMPTY_LAYOUT type, however not sure how this would work for EDITED_MESSAGE or DELETED_MESSAGE). There are also complexities with the transaction itself.
+                                                      
+ErrorHandlerWorker will start the application which will force
+a login if the application is not currently running, leaving it alone for now, however might
+want to add this to optimizations later (also true for DeleteFileWorker) (will still need to load balance)
+
+A search feature for activities (say they want to look up hiking). I would like to be able to eliminate all of the categories and activities that do not have a match for the word inside of them.
+
+Right now pictures are not checked to be corrupt or not. So it is possible for someone to send a picture that is ALWAYS corrupt. This would make a kind of loop where corrupt files spam the server.
+
+For an algorithm optomization I could sort by people closest in age FIRST then cut off the others? It doesn't guarantee the best matches, but it WOULD be a way to cut down on them if there are 'too many'. That being said I could do it in a variety of ways with just about any parameter. What I really want to do is somehow cut down on matches while guaranteeing they are the best matches. So it should need to be something to do w/ timeframes and activities.
+
+When selecting activities there really should be a way to check for activities AND categories and what changed (or it could be timeframes). In order to properly 'adjust' matches, each match would need to have which timeframe and activity that they matched with. It could retain any matches that are still valid which could increase accurracy? It would also need a system in place to notify the client if any extracted matches are actually expired (so the device can remove them). Not sure if there is ACTUALLY a benefit to this? Maybe it could save some algorithm runs.
+
+I think a good way to set up activities is to somehow make it so that it 'remembers' all activities that were searched for and the location they were searched from. THEN it will look at the user's location and give them the most searched for activities in some kind of a special 'shorter' list. And I can have an extended list that has maybe even hundreds or thousands of activities to select from. I will need a search feature for that list if I go this route. Problem: I could end up with categories that only contain 1 activity, so in an extreme situation I could end up with say 60 categories with 1 activity (this is probably avoidable by building good categories BY REGION for example ocean activities will only be in certain places by geography, culture could come into it too). OR I could mix the 2 methods of our statically chosen activities with the most popular activities for the area.
+
+My way of handling chat messages may drain the battery (maybe not because it is essentially inactive for 10 minutes during ChatStreamWorker, and I am not sure if the 'radio' will go into standyby even with the Channel and bi directional streams open).
+-https://developer.android.com/training/connectivity/minimize-effect-regular-updates
+-https://developer.android.com/training/0connectivity/network-access-optimization#radio-state
+
+Sometimes (the top of the SelectCategoriesFragment for example) the top bar hides BEFORE navigation occurs and it looks bad.
+
+Inside of chat room fragment, the popup menu (delete, reply, edit etc...) don't work until the message is sent to the server. There are some issues with concurrency if it IS done where something could be sent to the server WHILE it is being deleted only on the client. However most likely there is a way to use transactions and the locks inside ChatStreamObject to make it work.
+
+Used multiple channels to go around https://github.com/grpc/grpc-java/issues/9089. (I reported the bug https://stackoverflow.com/questions/71898610/grpc-java-rpcs-blocking-each-other) Re-read the bug and when they implement a fix, check it, then try to reduce channel count.
+
+Should put in a way to cancel updates that are being requested. For example if a user leaves a chat room/clears history/kicked/banned. Then the chat stream should cancel any pending updates for that chat room to not waste server or client resources. The vector may need a lock for this.
+
+When joining a chat room, it downloads all skeletons of all messages, might want to put a way of requesting only a large chunk of them, then downloading more large chunks from the server. Otherwise if there is some extreme number of messages (say thousands or tens of thousands). It will not need to spam the users device. I don't know that it will ever need to actually remove the new 'chunks' once they are downloaded. Clear history can do all of that. AND/OR I can add not load every single message into RAM on the device. After all a list of 100000 messages is a bit much even for a recycler view. OR There is probably a way to hook the recycler view to the database directly and have it load the next part of the list.
+
+On the server the messages are requested from the database inside chat_stream_container_object.cpp requestFullMessageInfo() and inside streamInitializationMessagesToClient() (may just be able to look at all functions that call convertChatMessageDocumentToChatMessageToClient() to make sure there are no more). It should be possible to not send back ALL of the message info from the database if only the SKELETON or ENOUGH_TO_DISPLAY_FINAL_MESSAGE are needed back.
+
+extractThumbnailFromVerifiedDoc can be set up to take a template argument instead. This will avoid the conditon.
+
+Initializing the ChatRoomContainerObject 'should' probably send back the messages as it gets them. Right now it can potentially store several chat rooms worth of members and messages before sending any back to the user. Maybe make a secondary writes_waiting_to_process to handle initialization messages then use the writeVectorElement and add another templated bool for which writes_waiting_to_process to use.
+
+Inside sendNewChatRoomAndMessages() it requests one member at a time from the database. It can be refactored to request all relevant members at the same time. Maybe multiple still, it needs to make requests to user_pictures and deleted_user_pictures too. I don't think member order matters so it be a big issue.
+
+The way errors are stored is a bit wonky. The searchErrors() function has to compile a lot of information by itself and it has to do it every time. It would probably be better (?) to compile this info somewhere else (say inside the HANDLED_ERRORS_LIST_COLLECTION_NAME, would need to change the name and some functionality). For example I could add every error to HANDLED_ERRORS_LIST_COLLECTION_NAME instead of only after they are handled and then set a bool inside to show handled. Then I could look through this for the errors I want. I could add some type of an upsert with $setOnInsert and $inc operators so when an error is stored it will create the document if it does not exist and it stores the number of errors of that type automatically.
+
+The write concern can have MUCH more leaway when storing statistics and errors, it doesn't even need to confirm that the database stored the info. As long as 99.99% of info is stored it should be just fine. This may be important later if the statistics collections grow and need to be set up as sharded clusters.
+
+(may already be written above) Probably change the way setServerCategoryOrActivity() is set up on the server. There is a comment about it inside the implementation of it. However, essentially it bottle necks and locks the entire document every time an activity is updated. Might be able to put multiple copies out there and just grab the one that is not locked or something?
+
+Can have a little info for this user said yes to you on matches screen (on Android).
+
+Should put basic measurements of time on the functions that could be the rate limiting function for the programe. Some ideas are chat stream functions, login, find matches, sms verification and any others. Then maybe when the server goes down save them to the database? Or maybe once a minute send something to the thread_pool (to not block user functions) to save them.
+
+Look at maxTimeMs maxTransactionLockRequestTimeoutMillis (maybe set to -1?).
+
+Inside the AppActivity in API 33 it will request POST_NOTIFICATIONS when they aern't available. Clean this up a little bit? It would probably look better with a dedicated fragment that has a nice GUI set up for it instead of the dialog fragment it currently is. https://developer.android.com/develop/ui/views/notifications/notification-permission
+
+It is probably a good idea to try and redo the schema of the android database now that I know more about it. The below line summarises what I did, maybe instead I can make more JOIN commands and use less or smaller transactions.
+Android Documentation: Each RoomDatabase instance is fairly expensive, and you rarely need access to multiple instances within a single process. NOTE: I used multiple to help minimize concurrency issues because I have a lot of transactions
+
+It might be a good idea to change how activity times are displayed. Instead of the current way where the times are on the right and left and there can only be one orange or blue bar, it might be better to remove the times and allow the bars to be long click able or just clickable. Then they can do a popup menu on screen and show the actual numbers for the times they represent. I will need to make the bars larger so they are clickable (height bigger) and a minimum width so they are clickable somehow. Also the problem where only one bar can be displayed isn't ok. For example if userA has a time of Dec 12 5:00AM to Dec 14 6:00PM and userB has times of Dec 12 5:00PM-6:00PM and Dec 13 5:00PM-6:00PM, this will show as two separate overlaps instead of a single overlap. But close times and overlap times etc can be displayed together this way if they are reletive to the same bar.
+
+I can add long click to show more info on activities (like the category they came from, could also add in say estimated point value or something, anything interesting could go here).
+
+Better understand what is sent back with a 'mime type' from Android. Otherwise people might be able to send in html and crash other people or something like that.
+
+Setup user accounts to store the most recent version number the user logged in with.
+
+Maybe limit users sending SMS Verification by IP too? It is possible for someone to just log on and send SMS over and over to random phone numbers right now.
+
+Want growth metrics for growth and retention of users in general.
+
+When planning features, metrics to measure how the features are doing should be PART OF THE PLANNING PHASE. They should also be written into the spec.
+
+Need to limit server access, there is a limit to the speed humans can send messages. So especially the manual messages must have a limit. There is already double click protection on the send button, so there is a cap there, but need to limit it on the server side as well. Should also find a way to expand this out and apply it to other features on the server to provide not just spam protection for the chat, but spam/bot/script protection for the other functions on the server. Probably just time the user out for a few minutes if this is detected. That way if a bug happens on my end, I don't have to worry too much. Ideas to limit. Speed at which people can guess an sms verification code (maybe a 500ms delay with a 5 minute time or something). Number of times or speed people can guess birthdays when logging into someone else account (they also need the other users' phone number).
+
+
+A database call is made on the coRoutine when logging in inside initializeObject() in chat_stream_container_object.cpp. Is there a way for me to suspend the coroutine until the database call is complete? Do I even want to do this? I know coroutines in Kotlin can do it, so I assume there is a way.
+
+For Google Logins 
+-implement backend Facebook and Google Authentication
+-implement JWT tokens instead of mongoDB IDs
+
+
+Server ideas for later (The VPS servers)
+-ideas to keep track of on server
+--metrics (not 100% sure what, the VPS providers offer simple stuff)
+--fail2ban reports (need to keep)
+-backups Make sure all of the VPS have backups somehow.
+-logwatch (maybe, can mail daily reports to myself as a summary of /var/log folder) SMTP may be restricted (on Linode they are)
+-consistent time (the VPS provider is resposible for this, things like NTP don't seem to work)
+-antivirus (ClamAV is a virus scanner for example, will probably need to configure it to )
+-look at data center locations and set priority based on latency? https://www.mongodb.com/docs/manual/core/replica-set-architecture-geographically-distributed/
+-skipped clusterIpSourceAllowlist because it requires rolling restarts in order to update nodes, maybe when this is fixed implement it
+--https://www.mongodb.com/docs/v6.0/reference/configuration-options/#mongodb-setting-security.clusterIpSourceAllowlist
+
+
+There may be a possibility that someone could 'for example' call the SMS verification function twice before the first one finishes and with multi threading end up with 2 verified accounts. Each account has a unique index by phone number so it shouldn't be possible, BUT if say shared cluster are ever used which do not allow unique index, it could be a problem. Try to do something about this. Also if I can prevent things like this I can stop using the find find() function for mongoDB (loginfunction and SMSverification at least) and I am fairly sure it takes more time than find_one does (probably not by much with indexing). Then maybe just run a cleanup once a day.
+
+
+ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS (or maybe ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS) will allow the app the properly accept messages all the time (instead of being shut down by doze). However It needs to be an 'exemption' (which we can certainly argue that it is) and I don't think Google Play automatically allows this. There is probably some beurocracy that needs to be gone through.
+https://developer.android.com/training/monitoring-device-state/doze-standby#exemption-cases. Google FCM is free and will also allow this, however that means every message will have to go through Google AND we would need to implement it on server side. Make sure to avoid isLightDeviceIdleMode() and isDeviceIdleMode() (in Android code) if I can get this implemented on the app store.
+
+
+extractThumbnailFromUserAccountDoc() is kind of clunky, there is probably a better way to do this. Look at it and refactor.
+
+
+Tests take ~10min at the time of writing this. In order to make them go faster can change insertRandomAccounts() to NOT run through the actual account creation process. Instead it can say generate a complete UserAccountDoc randomly and insert it.
+
+
+Now that chat rooms have a QR Code, it can be cleaned up in CleanDatabaseWorker if the chat room has not been viewed in a while.
+
+
+Android cleaner code ideas
+-The android code has far too many layers. For example, search for 'sharedApplicationViewModel.setAlgorithmSearchOptions' and follow the path that it takes down and up. Even simple updates take 20 minutes because of this.
+-How do I split the android modules down in size? Most of the files end up too long.
+-There is no reason for the GlobalValues file should exist, or at the very least it should be much much shorter, most of the stuff can be removed.
+
+Try to see if I can setup some kind of CI/CD for this? at least for the server would be nice. Running tests beforehand somehow is important.
+
+For Android I can probably do some stuff to make it so that I leave the proper server information inside the files. Maybe setup the git workflow with a `debug` and `main` branch. Then I can move the stuff that should be setup for release into a separate file and not merge them from `debug` to main.

@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+enum AdminLevelEnum {
+  NO_ADMIN_ACCESS = 0;
+  PRIMARY_DEVELOPER = 1;
+  STANDARD_DEVELOPER = 2;
+  FULL_ACCESS_ADMIN = 3;
+  HANDLE_REPORTS_ONLY = 4;
+}
+
+message AdminPrivileges {
+  bool view_matching_activity_statistics = 1;
+  bool view_age_gender_statistics = 2;
+  bool view_activities_and_categories = 3;
+  bool update_activities_and_categories = 4;
+  bool update_icons = 5;
+  bool view_reports = 6;
+  bool handle_reports = 7;
+  bool find_single_users = 8;
+  bool update_single_users = 9;
+  bool view_activity_feedback = 10;
+  bool view_other_feedback = 11;
+  bool view_bugs_feedback = 12;
+  bool setup_default_values = 13;
+  bool request_chat_messages = 14;
+  bool request_error_messages = 15;
+  bool handle_error_messages = 16;
+  bool run_server_shutdowns = 17;
+  bool add_events = 18;
+  bool cancel_events = 19;
+  bool find_single_event = 20;
+  bool request_events = 21;
+}

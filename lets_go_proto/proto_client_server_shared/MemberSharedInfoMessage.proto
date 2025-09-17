@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+option java_package = "member_shared_info";
+
+import "RequestMessages.proto";
+import "CategoryTimeFrame.proto";
+import "UserAccountType.proto";
+import "LetsGoEventStatus.proto";
+
+message MemberSharedInfoMessage {
+
+  //NOTE: the times this message is currently used (from server to client)
+  //1) FindMatches returns a match (all pictures and info are filled out)
+  //2) user joins chat room manually, these messages are streamed back (all pictures and info are filled out)
+  //3) user joins chat room automatically when logged in (they existed inside the chat room on server but not on client) (no pictures are filled out)
+  //4) user clicks a chat room and any members that need updated will be sent back (depends on booleans,
+  // only certain elements will be filled out, look at UpdateChatRoomMembersResponse inside ChatRoomCommands.proto)
+
+  //these elements will not change
+  string account_oid = 1; //the account ID to be returned to the server
+  string account_name = 2;
+
+  //these elements will change
+  //if thumbnail is "" then assume no thumbnail was set
+  //if thumbnail is "~" then the thumbnail was deleted
+  bytes account_thumbnail = 3;
+  int32 account_thumbnail_size = 4;
+  int32 account_thumbnail_index = 5; //the index that was used for the thumbnail
+  int64 account_thumbnail_timestamp = 6; //the timestamp that the thumbnail was last updated
+
+  //if it is an initial request when logging in the entire picture will not be returned, only the index number
+  //if this is empty then assume no pictures were set
+  //NOTE: if a PictureMessage is set to the default values, delete that picture on client
+  repeated PictureMessage picture = 7;
+
+  //will be set to true if the pictures were checked for updates, false if less than full picture was returned (this is
+  // closely related to HowToHandleMemberPictures enum on the server, when HowToHandleMemberPictures == REQUEST_ALL_PICTURE_INFO
+  // then this will be set to true)
+  bool pictures_checked_for_updates = 8;
+
+  int32 age = 9;
+  string gender = 10;
+  string city_name = 11;
+  string bio = 12;
+  double distance = 13; //NOTE: only used when returning from matching algorithm
+  repeated CategoryActivityMessage activities = 14; //NOTE: -1 will be used to signify an element that starts 'NOW'
+                                                    //NOTE: this array can be empty which will mean 'anytime'
+
+  //this is set on the server and client currently uses it for the thumbnail update
+  int64 current_timestamp = 15;
+
+  int64 timestamp_other_user_info_updated = 16; //this will be set whenever one of the fields including age, gender, city_name, bio, activities changes
+                                                //it will be set to the most recent timestamp of the fields from the server, NOT the current time
+                                                //it will be default value of 0 if none of the field were checked (0 is because this would have to be coordinated across several functions if I wanted to set to -1)
+
+  //Relevant info for events
+  UserAccountType account_type = 17;
+  LetsGoEventStatus letsgo_event_status = 18;
+  string created_by = 19; //Only relevant for events. Will be set to the oid that created the event. Otherwise left blank. Will be set to 'LetsGo' if created by admin.
+  string event_title = 21; //Only relevant for events. Will be set to the event_values::EVENT_TITLE. Otherwise left blank.
+
+}

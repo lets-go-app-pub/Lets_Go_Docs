@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+option java_package = "access_status";
+
+enum AccessStatus {
+  STATUS_NOT_SET = 0; //this is the default value and should only be set if a failure in gRPC occurred
+  NEEDS_MORE_INFO = 1; //redirect to enter code for SMS verification function
+  ACCESS_GRANTED = 2; //account has all info redirect to primary application
+  SUSPENDED = 3; //account has been suspended, message is set below for reason
+  BANNED = 4; //account has been banned, message is set below for reason
+  LG_ERR = 5; //this means the login function didn't set it
+}

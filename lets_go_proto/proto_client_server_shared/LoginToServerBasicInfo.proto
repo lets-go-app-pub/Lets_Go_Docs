@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option java_package = "login_to_server_basic_info";
+
+message LoginToServerBasicInfo {
+  bool admin_info_used = 1; //true if logging in as admin, false if logging in as user from device
+
+  //required for BOTH admin_info_used == true && admin_info_used == false
+  uint32 lets_go_version = 2; //pass current version of calling application
+
+  //required user info (only used if admin_info_used==false)
+  string current_account_id = 3; //the current users account ID
+  string logged_in_token = 4; //the log in account ID
+  string installation_id = 5; //unique ID representing the device/installation number
+
+  //required admin info (only used if admin_info_used==true)
+  string admin_name = 6;
+  string admin_password = 7;
+}

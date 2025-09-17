@@ -1,0 +1,146 @@
+**Initial Comments**
+
+It is important to remember a few things. The easiest way presently to get grpc on windows is to use vcpkg to install it and all of its dependencies. However, vcpkg uses MSVC as the compiler. This means EVERYTHING MUST USE MSVC.
+
+Qt is the second major thing that must be installed and linked to. While it can be done in something like CLion or Visual Studio, because this is just rebuilding a built program Qt Creator seems to work the best.
+
+Qt seems to need a static build in order to work on different devices. This means that a static Qt will need to be built. However, at the time of writing this Qt doesn't have a -platform win64-msvc option. So win32-msvc must be used. This means 32 bit libraries must be available for everything (vcpkg will naturally get both 32 and 64 bit versions).
+
+Static versions are not available for all libraries associated with gRPC. This means that .dll files will need to be stored in the folder and moved with the program.
+
+On Ubuntu the project uses CMake to run the protoc command to build the .proto files into c++ and grpc files. On windows the same setup does not work. I found it was easier to just generate them all manually then include them inside the project. They should be generated separatly from Ubuntu because the same version of protobuf should be used to generate and read the files.
+
+Some paths that might be useful when going through this.
+
+Qt Static Build
+D:\Qt\6.2.4\msvc2019_64_static
+
+Qt Creator
+D:\Qt\Tools\QtCreator\bin\qtcreator.exe
+
+Qt Maitenence Tool (install tool)
+D:\Qt\MaintenanceTool.exe
+
+Project
+C:\Users\Thisis AWaste\Documents\Desktop_Interface_2_11_23
+
+**Setup project**
+
+Look at Checklist_Before_Release.txt for what to fix in the code before moving it to windows.
+
+Copy project files somewhere (used Documents last time). Will need the project as well as the .proto files. (Lets_Go_Interface folder and lets_go_proto folders must both be copied).
+
+Convert the .proto files into the c++ files (look at generate_proto_files.bat). Add them to the 'project' directory.
+
+Don't need the 'outter' CMakeLists.txt file. Can load the project using just the CMakeLists.txt inside the 'project' directory. This also eliminates the need for some of the paths and environment variables.
+
+Make some modifications to the CMakeLists.txt file.
+-add at the very top
+cmake_minimum_required(VERSION 3.20)
+project(Lets_Go_Interface)
+set(CMAKE_CXX_STANDARD 20)
+-make sure these are NOT commented out
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+-link it to Qt
+list(APPEND CMAKE_PREFIX_PATH D:/Qt/6.2.4/msvc2019_64_static/lib/cmake)
+--comment out old link
+#set(CMAKE_PREFIX_PATH "/home/jeremiah/Qt/6.1.2/gcc_64")
+-need grpc and protobuf linked
+find_package(Protobuf 3.21.8 REQUIRED)
+find_package(gRPC 1.49.0 CONFIG REQUIRED)
+-add ALL FILES GENERATED FROM .proto files at the end of sources, can copy all file names to a text file with command 'dir > _names.txt'
+-set target_compile_options under if(MSVC)
+target_compile_options(project PRIVATE /O2 /Wall "/Zc:__cplusplus")
+-add folders containing generated files to include_directories
+generated_proto_client_server_shared
+generated_proto_server_specific
+-under target_link_libraries remove generated_proto_server_specific & generated_proto_client_server_shared; add gRPC::grpc & gRPC::grpc++
+
+**Install gRPC and dependencies**
+
+NOTE: May be able to update d:\vcpkg instead of starting over.
+
+Navigate to the location to install vcpkg and run the following commands from the terminal.
+
+git clone https://github.com/Microsoft/vcpkg.git
+.\vcpkg\bootstrap-vcpkg.bat
+cd vcpkg
+
+-OPTIONAL (This will install an older version of grpc and the dependencies)
+-open powershell and run below command inside vcpkg directory
+git checkout (git rev-list -n 1 --before="2022-10-30" master)
+
+.\vcpkg install grpc
+.\vcpkg integrate install
+
+NOTE: After the final command a message will popup saying something about adding a line to CMake of "-DCMAKE_TOOLCHAIN_FILE=D:/vcpkg/scripts/buildsystems/vcpkg.cmake". Copy this string, will need it later.
+
+**Install Static Qt**
+
+Install the Qt Installer (or use MaintenanceTool.exe).
+
+Go through the process to install Qt using the installer. However, the only things that are important are the Qt Creator and sources for the version of Qt that I want.
+
+
+Make a cmd to go with the terminal
+-Create a file named 'qt6vars.cmd'.
+-Open the file in a text editor 
+-Add the below lines (modify the paths to fit) to the file.
+REM Set up Microsoft Visual Studio 2022
+CALL "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x86_amd64
+SET _ROOT=D:\Qt\6.2.4\Src
+SET PATH=%_ROOT%\qtbase\bin;%PATH%
+SET _ROOT=
+
+
+Create a terminal to use.
+-Save qt6vars.cmd somewhere
+-Right-click on the Desktop and select "New" > "Shortcut".
+-In the "Create Shortcut" window, enter the command "%SystemRoot%\system32\cmd.exe /E:ON /V:ON /k C:\Qt\qt6vars.cmd" in the "Type the location of the item" field.
+--Change path C:\Qt\qt6vars.cmd to the actual path.
+-Click the "Next" button.
+-Enter a name for the shortcut (e.g. "Qt Build Environment") and click the "Finish" button.
+
+Open the newly created terminal
+
+Once sources have been installed, they will be installed to a folder at Qt\6.2.4\Src. 
+Create another folder for the static build. For example Qt\6.2.4\msvc2019_32_static
+Navigate to this sources folder and run the below commands. WARNING: Could take a long time.
+.\configure -release -static -opensource -platform win32-msvc -confirm-license -prefix D:\Qt\6.2.4\msvc2019_32_static
+cmake --build . --parallel
+cmake --install .
+
+
+**Install Static Qt**
+
+Open Qt Creator. Load the project above (it requires loading the correct CMakeLists.txt file).
+
+Navigate to the 'Preferences' window.
+On the left side of the window is a menu, select 'Kits'.
+On the top bar of this select 'Qt Versions'.
+Push 'Add' on the right.
+Select the path to the static generated version of the qmake.exe file (for example d:\Qt\6.2.4\msvc2019_32_static\bin\qmake.exe).
+On the top bar of this select 'Kits'.
+Clone an auto detected one for the Desktop if possible.
+Inside the new Kits' options.
+-Make the name include Static somewhere.
+-Set the Compiler for C and C++ to the latest MSVC (probably need at least MSVC 16 for jthread to work).
+-Set the Qt version to the newly created version.
+Apply everything and close the 'Preferences' windows.
+
+On the left side, select 'Projects'. Select the proper kit and select 'Release' for the build configuration.
+Make sure the 'Build directory' file name is not too long, otherwise the build will fail (the final part of the path is auto generated and can get quite long).
+Under 'Additional CMake options' paste the line that was copied above above (-DCMAKE_TOOLCHAIN_FILE=D:/vcpkg/scripts/buildsystems/vcpkg.cmake). This will allow CMake to find the libraries from vcpkg.
+Press the 'Re-configure with Initial Parameters' button.
+In the bottom left, make sure that Release and the proper Kit are selected and then press 'Build'.
+
+Navigate to the build directory (the path can be found under Projects).
+The entire directory can be zipped and sent out to other Windows machines.
+
+
+**Final Notes**
+
+Ryan mentioned that the folder must be extracted outside of his Downloads folder in order to work.
+

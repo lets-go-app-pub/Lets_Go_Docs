@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+option java_package = "event_request_message";
+
+import "CategoryTimeFrame.proto";
+
+message EventsPictureMessage {
+  bytes file_in_bytes = 1; //the bytes for the file itself
+  int32 file_size = 2; //the size of the file, used to check for corrupted data
+  bytes thumbnail_in_bytes = 3; //the bytes for the thumbnail
+  int32 thumbnail_size = 4; //the size of the thumbnail, used to check for corrupted data
+}
+
+message EventRequestMessage {
+  string event_title = 1;
+
+  string bio = 2;
+
+  string city = 3;
+
+  double location_longitude = 4;
+  double location_latitude = 5;
+
+  int32 min_allowed_age = 6;
+  int32 max_allowed_age = 7;
+
+  repeated string allowed_genders = 8; //Can simply be set to a single value of 'Everyone' OR to 'Male' and 'Female'.
+
+  CategoryActivityMessage activity = 9; //This requires exactly one CategoryTimeFrameMessage in the future to be set.
+
+  repeated EventsPictureMessage pictures = 10; //Indexes here will be used to reflect indexes inside the array.
+
+  //The qr code fields should be left as default when sending in user created events.
+  bytes qr_code_file_in_bytes = 11;
+  int32 qr_code_file_size = 12;
+  string qr_code_message = 13;
+}

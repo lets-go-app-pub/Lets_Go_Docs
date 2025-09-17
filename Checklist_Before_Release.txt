@@ -1,0 +1,95 @@
+**BEFORE PUBLISHING RELEASE UPDATE**
+
+
+Server
+-Make sure API Keys are valid (inside send_email.py and send_sms.py)
+-Change setup_for_deployment to TRUE in server CMakeLists.txt.
+-Increment SERVER_CURRENT_VERSION_NUMBER by 1.
+-There are Ubuntu environment variables associated with this (they may not need changed, but listed just in case).
+--CMAKE_PREFIX_PATH_LETS_GO
+--SERVER_SPECIFIC_PROTO_FILE_DIRECTORY_LETS_GO
+--CLIENT_SERVER_PROTO_FILE_DIRECTORY_LETS_GO
+--SERVER_SPECIFIC_PROTO_INCLUDE_PATHS_LETS_GO
+--GRPC_SSL_KEY_DIRECTORY_LETS_GO
+--ERROR_LOG_OUTPUT_DIRECTORY_LETS_GO
+--PYTHON_FILES_DIRECTORY_LETS_GO
+--LETS_GO_PATH_TO_SRC
+--MONGODB_REPLICA_SET_URI_LETS_GO
+-set up global_values.h variables (such as times)
+-Make sure GRPC_SERVER_ADDRESSES_URI is correct.
+-Make sure mongodb_values::URI is correct.
+-Turn off print() methods inside send_email.py and send_sms.py.
+-Look through TODO statements.
+
+
+Android
+-Take default phone number out of the app.
+-Set up GlobalValues.kt variables (such as times)
+-Increment build.gradle Module android.defaultConfig {versonCode, versionName}.
+-Increment GlobalValues.Lets_GO_Version_Number by 1.
+-Increment room database 'version' if relevant (if anything changed).
+--Also need to migrate it, otherwise when the new version is installed it will simply clear the database
+--https://developer.android.com/training/data-storage/room/migrating-db-versions
+-Update the icons list in Utility.getAllPreLoadedIcons(). Make sure that Utility.iconsMapTable is updated as well.
+-Update the timestamp to the current timestamp in Utility.getAllPreLoadedIcons (it is a timestamp in millis inside Utility.kt getAllPreLoadedIcons() set it to AFTER the time the default icons are stored)
+-Need to use release SSL cert. Also make sure that SSL is enabled.
+--Inside GlobalValues can probably just uncomment the line containing R.raw.public_cert and comment the line containing R.raw.testing_public_cert.
+-Need to make sure that inside createDefaultGlobals(), globalConstants.addServerInfo( are set up for live servers.
+-Set up createDefaultGlobals() inside GlobalValues.kt. Make sure all variables are sent over and that they match.
+-Make sure inside Manifest the android:screenOrientation="portrait" is set for the AppActivity and LoginActivity.
+-Go through TODO statements.
+-Make sure that the new version properly updates from the old version.
+-Release the app to internal testing and make sure that all the basics at least work (for example had a bug involving minify and navigation host parameters).
+
+Web Server
+-Set up MONGODB_URI_STRING inside of views.py
+-Make sure variables are the same as the server
+
+
+Desktop Interface
+-Make sure to setup the correct admin. USER_NAME and USER_PASSWORD
+-May need to update DESKTOP_INTERFACE_VERSION_NUMBER.
+-This is meant to be built inside QT_CREATOR, so the QT_DEBUG flag should NOT be set during a production release. Through preprocessor statements, the flag will.
+--Set up the server to connect to live servers ("letsgoclientinterfaceli.com", 50051).
+--Make sure the ssl certificate is the release version.
+--Turn off the 'set global values' button.
+-May also need to make sure that ssl is enabled instead of InsecureChannelCredentials. This can be found inside setup_grpc_channel.cpp.
+-Make sure that target_compile_options are setup properly for highest optimizations.
+--MSVC needs /O2
+--GCC/Clang needs -O3
+---This can be uncommented
+
+**BEFORE ANYONE CAN LOOK AT CODE**
+
+SendGrid
+-There is an API key inside of the send_email.py file.
+--remember that these are also saved inside previous commits on GitHub, can look into removing them with below link
+---https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository
+
+Twilio
+-There are 2 API keys inside of send_sms.py.
+--remember that these are also saved inside previous commits on GitHub, can look into removing them with below link
+---https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository
+
+Security Stuff
+-Inside Documents/Lets_Go_Security (and a copy is stored on my USB drive), all of these files must be set up in a more secure way.
+
+
+**ALREADY COMPLETED OR UNUSED (But worth noting)**
+
+Android
+-facebook
+--https://developers.facebook.com/apps/647487093419678/rate-limit-details/app/
+-will need to update SHA1: key to release version for Google Login (google dashboard thing)
+-will need to update SHA1: key to release version for Facebook login (developers.facebook.com) (go to Facebook Login->Quickstart, then click android to see the instructions)
+-need to take the API key "Google Maps Key" off debug and set the SHA-1 key to release? https://developers.google.com/places/android-sdk/get-api-key#release-cert (inside the API key in the Google project Let's Go it gives the command to get the release API Key)
+-will also need to update facebook info Settings->Basic, Privacy Policy URL, Terms of Service URL, User Data Deletion
+--need to 'Verify Your Business' Manager account (in basic settings on facebook for developers)
+--need to get App Authorization (the 2 links below)
+--https://developers.facebook.com/docs/facebook-login/permissions
+--https://developers.facebook.com/docs/apps/review
+-The MySMSBroadcast needs some a hash, read about it here (it is a hash to identify the app) https://developers.google.com/identity/sms-retriever/verify (Inside The app there is a function JavaGetSMSHash to generate it for debug, read above link to generate it)
+
+Database
+-run db.adminCommand({getLog: "startupWarnings"}) (this command will show warnings such as ulimit reached, which can be fixed using https://stackoverflow.com/questions/63960859/how-can-i-raise-the-limit-for-open-files-in-ubuntu-20-04-on-wsl2 stuff (65535) needs to be added in 2 places, /etc/systemd/user.conf and /etc/security/limits.conf)
+

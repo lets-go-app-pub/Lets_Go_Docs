@@ -1,0 +1,350 @@
+syntax = "proto3";
+
+option java_package = "type_of_chat_message";
+
+import "ChatRoomInfoMessage.proto";
+
+enum DeleteType {
+  DELETE_TYPE_NOT_SET = 0; //this is the default value used for message types other than MESSAGE_DELETED, it should never be stored inside the server
+  DELETED_ON_CLIENT = 10; //this is used on the client to show a message was deleted, it should never be stored inside the server
+  DELETE_FOR_SINGLE_USER = 20; //this is used in sending a MESSAGE_DELETED from client->server
+  //NOTE: it is very important that DELETE_FOR_ALL_USERS comes last, the database uses that it is the largest value in the enum
+  DELETE_FOR_ALL_USERS = 30; //this is used in sending a MESSAGE_DELETED from client->server
+}
+
+//NOTE: These should go from the least amount returned as the smallest number to the largest amount returned as the
+// largest number. Gaps were left in the case new types are added.
+enum AmountOfMessage {
+  ONLY_SKELETON = 0; //only send back small things, sentByAccountOID, chatRoomId, message OID as well as some basic info such as image_height and image_width
+  ENOUGH_TO_DISPLAY_AS_FINAL_MESSAGE = 10; //send back things needed to display this as a 'final' message inside chat room
+  COMPLETE_MESSAGE_INFO = 20; //send back everything
+}
+
+// When adding or removing message types from this see the server documentation chat_room_commands/_documentation.md
+//  under the header updating TypeOfChatMessage.MessageSpecifics.
+// This class is organized similarly to the C++ namespace chat_room_message_keys.
+message MessageSpecifics {
+  oneof message_body {
+
+    //client and server message types
+    TextChatMessage text_message = 1;
+    PictureChatMessage picture_message = 2;
+    LocationChatMessage location_message = 3;
+    MimeTypeChatMessage mime_type_message = 4;
+    InviteChatMessage invite_message = 5;
+    EditedMessageChatMessage edited_message = 6;
+    DeletedMessageChatMessage deleted_message = 7;
+    UserKickedChatMessage user_kicked_message = 8;
+    UserBannedChatMessage user_banned_message = 9;
+    DifferentUserJoinedChatRoomChatMessage different_user_joined_message = 10;
+    DifferentUserLeftChatRoomChatMessage different_user_left_message = 11;
+    UpdateObservedTimeChatMessage update_observed_time_message = 12;
+    ThisUserJoinedChatRoomStartChatMessage this_user_joined_chat_room_start_message = 13;
+    ThisUserJoinedChatRoomMemberChatMessage this_user_joined_chat_room_member_message = 14;
+    ThisUserJoinedChatRoomFinishedChatMessage this_user_joined_chat_room_finished_message = 15;
+    ThisUserLeftChatRoomChatMessage this_user_left_chat_room_message = 16;
+    UserActivityDetectedChatMessage user_activity_detected_message = 17;
+    ChatRoomNameUpdatedChatMessage chat_room_name_updated_message = 18;
+    ChatRoomPasswordUpdatedChatMessage chat_room_password_updated_message = 19;
+    NewAdminPromotedChatMessage new_admin_promoted_message = 20;
+    ChatRoomCapMessage chat_room_cap_message = 21;
+
+    NewPinnedLocationMessage new_pinned_location_message = 22;
+
+    //NOTE: Only put messages before 'match_canceled_message' numerically if they should be extracted AND returned to the client.
+    MatchCanceledChatMessage match_canceled_message = 500;
+    NewUpdateTimeMessage new_update_time_message = 501;
+
+    //client specific message types
+    ClientSpecificDoNotUseMessage history_cleared_message = 1000;
+    ClientSpecificDoNotUseMessage loading_message = 1001;
+  }
+}
+
+//This is used to add extra enum values inside MessageSpecifics, these are client side specific and are ONLY
+// used as a form of 'book keeping', they should never be sent between the client and server.
+message ClientSpecificDoNotUseMessage {}
+
+//NOTE: The values here are mapped to the database entity on android, so unless the device will store the message don't
+// put the value inside here (can put it inside ChatMessageToClient).
+message TypeOfChatMessage {
+  MessageSpecifics message_specifics = 1;
+
+  StandardChatMessageInfo standard_message_info = 2;
+}
+
+message StandardChatMessageInfo {
+  string chat_room_id_message_sent_from = 1;
+
+  //if multiple different states are the same for a message type (for example ENOUGH_TO_DISPLAY_AS_FINAL_MESSAGE sends the same info as
+  // ONLY_SKELETON, the LOWEST value will be passed back so ONLY_SKELETON in this example) message_has_complete_info will be used to tell
+  // if the message requires more info to be downloaded
+  //this will be set for all messages however it will only be relevant for the 'active' message types (other message types always have all info sent back)
+  // the 'active' message types can all have AmountOfMessage == COMPLETE_MESSAGE_INFO because the reply info is only sent back
+  // when COMPLETE_MESSAGE_INFO is requested
+  AmountOfMessage amount_of_message = 2; //amount of the message sent back to the client (only relevant on server->client)
+  bool message_has_complete_info = 3; //this will be set to true if the message does not require downloading anything else with the server (works with AmountOfMessage but more specific) (only relevant on server->client)
+  bool do_not_update_user_state = 4; //if this is true, it will mean that this message is not expected to update things like the current user being kicked (only relevant on server->client)
+
+  bool internal_force_send_message_to_current_user = 5; //used internally by the server as well as for debugging purposes
+}
+
+message ReplySpecifics {
+  oneof reply_body {
+    TextChatReplyMessage text_reply = 1;
+    PictureReplyMessage picture_reply = 2;
+    LocationReplyMessage location_reply = 3;
+    MimeTypeReplyMessage mime_reply = 4;
+    InvitedReplyMessage invite_reply = 5;
+  }
+}
+
+message ReplyChatMessageInfo {
+    ReplySpecifics reply_specifics = 1;
+
+    string reply_is_sent_from_user_oid = 2; //if is_reply is true, this will be the oid of user that sent the message being replied to
+    string reply_is_to_message_uuid = 3; //if is_reply is true, this will be the uuid of the message being replied to
+}
+
+//Most of what is considered the 'standard message info' is stored inside the ChatMessageToClientMessage.proto the
+// reason for this is because these 'messages' only use the info needed for chatMessageToServer().
+message ActiveMessageInfo {
+
+    //the deleted messages will not be passed back normally, however if a message update
+    // is requested this value can be used (only relevant on server->client)
+    bool is_deleted = 1;
+
+    //this value will be set even if AmountOfMessage == ONLY_SKELETON, the only exception is
+    // if is_deleted == true, then this will always be false
+    bool is_reply = 2;
+
+    //will be set if is_reply == true AND AmountOfMessage == COMPLETE_MESSAGE_INFO
+    ReplyChatMessageInfo reply_info = 3;
+}
+
+message TextChatReplyMessage {
+  string message_text = 1;
+}
+
+message PictureReplyMessage {
+  bytes thumbnail_in_bytes = 1; //if this will be the bytes for the thumbnail of the picture file
+  int32 thumbnail_file_size = 2; //if reply_is_from_thumbnail_in_bytes is set; will be the size of the file in bytes
+}
+
+message LocationReplyMessage {}
+
+message MimeTypeReplyMessage {
+  bytes thumbnail_in_bytes = 1; //if this will be the bytes for the thumbnail of the picture file
+  int32 thumbnail_file_size = 2; //if reply_is_from_thumbnail_in_bytes is set; will be the size of the file in bytes
+  string thumbnail_mime_type = 3;
+}
+
+message InvitedReplyMessage {}
+
+//this message is generated when clientMessageToServer() is called
+//USED: (client <-> server)
+message TextChatMessage {
+
+  //AmountOfMessage can be set to
+  //ONLY_SKELETON
+  //ENOUGH_TO_DISPLAY_AS_FINAL_MESSAGE (has_complete_info == true could be set if text is short enough)
+  //COMPLETE_MESSAGE_INFO (has_complete_info == true)
+
+  ActiveMessageInfo active_message_info = 1;
+  string message_text = 2; //NOTE: can be trimmed if AmountOfMessage == ENOUGH_TO_DISPLAY_AS_FINAL_MESSAGE
+
+  //if message is edited (only used when sending server -> client); MESSAGE_EDITED type is used for (client -> server)
+  bool is_edited = 3;
+  int64 edited_time = 4;
+}
+
+//this message is sent from the client through clientMessageToServer() to be stored in the server
+//USED: (client <-> server)
+message PictureChatMessage {
+
+  //AmountOfMessage can be set to
+  //ONLY_SKELETON
+  //COMPLETE_MESSAGE_INFO (has_complete_info == true)
+
+  ActiveMessageInfo active_message_info = 1;
+
+  //picture
+  bytes picture_file_in_bytes = 2; //the bytes for the picture file itself
+  int32 picture_file_size = 3; //the size of the file, used to check for corrupted data (will be -1 if picture corrupt on server)
+
+  int32 image_height = 4; //the height of the image in pixels
+  int32 image_width = 5; //the width of the image in pixels
+}
+
+//this message is sent from the client through clientMessageToServer() to be stored in the server
+//USED: (client <-> server)
+message LocationChatMessage {
+
+  //AmountOfMessage can be set to
+  //ONLY_SKELETON
+  //ENOUGH_TO_DISPLAY_AS_FINAL_MESSAGE (has_complete_info == true)
+
+  ActiveMessageInfo active_message_info = 1;
+
+  //location
+  double longitude = 2;
+  double latitude = 3;
+}
+
+//this message is sent from the client through clientMessageToServer() to be stored in the server
+//USED: (client <-> server)
+message MimeTypeChatMessage {
+
+  //AmountOfMessage can be set to
+  //ONLY_SKELETON
+  //ENOUGH_TO_DISPLAY_AS_FINAL_MESSAGE (has_complete_info == true)
+
+  ActiveMessageInfo active_message_info = 1;
+
+  //image stats, used with gif and picture
+  int32 image_height = 2; //the height of the image in pixels
+  int32 image_width = 3; //the width of the image in pixels
+
+  //url of image/gif
+  string url_of_download = 4; //the url of the gif to be downloaded
+
+  //string representing mime type of image
+  string mime_type = 5;
+}
+
+//this message is sent from the client through clientMessageToServer() to be stored in the server
+//USED: (client <-> server)
+message InviteChatMessage {
+
+  ActiveMessageInfo active_message_info = 1;
+
+  //invited user info
+  string invited_user_account_oid = 2;
+  string invited_user_name = 3;
+
+  //chat room info user was invited to
+  string chat_room_id = 4;
+  string chat_room_name = 5;
+  string chat_room_password = 6;
+}
+
+//this message is sent from the client through clientMessageToServer() to be stored in the server
+//USED: (client <-> server)
+message EditedMessageChatMessage {
+  string new_message = 1;
+  string message_uuid = 2;
+}
+
+//this message is sent from the client through clientMessageToServer() to be stored in the server
+//USED: (client <-> server)
+message DeletedMessageChatMessage {
+  //message deleted type (only used when sending client -> server)
+  DeleteType delete_type = 1;
+  string message_uuid = 2;
+}
+
+//this message is sent from the client through clientMessageToServer() to be stored in the server
+//USED: (client <- server)
+message UserKickedChatMessage {
+  string kicked_account_oid = 1;
+}
+
+//this message is generated on the server when a user calls removeFromChatRoom()
+//USED: (client <- server)
+message UserBannedChatMessage {
+  string banned_account_oid = 1;
+}
+
+//this message is generated on the server when a user calls joinChatRoom()
+//USED: (client <- server)
+message DifferentUserJoinedChatRoomChatMessage {
+  //user joined chat
+  ChatRoomMemberInfoMessage member_info = 1;
+}
+
+//this message is generated on the server when a user calls leaveChatRoom()
+//USED: (client <- server)
+message DifferentUserLeftChatRoomChatMessage {
+  //will only be set if a new user was promoted to admin (otherwise invalid oid)
+  string new_admin_account_oid = 1;
+}
+
+//this message is sent from the client through clientMessageToServer()
+//this message is NOT STORED inside the server database (and only temporarily stored inside client database)
+//USED: (client <-> server)
+message UpdateObservedTimeChatMessage {
+  //(client <- server) used in extractChatRooms when sending an update observed time to client
+  int64 chat_room_last_observed_time = 1;
+}
+
+//generated on server inside sendNewChatRoomAndMessages() when retrieving a chat room for a client
+//USED: (client <- server)
+message ThisUserJoinedChatRoomStartChatMessage {
+  ChatRoomInfoMessage chat_room_info = 1;
+}
+
+//generated on server inside sendNewChatRoomAndMessages() when retrieving a chat room for a client
+//USED: (client <- server)
+message ThisUserJoinedChatRoomMemberChatMessage {
+  ChatRoomMemberInfoMessage member_info = 1;
+}
+
+//generated on server inside sendNewChatRoomAndMessages() when retrieving a chat room for a client
+//USED: (client <- server)
+message ThisUserJoinedChatRoomFinishedChatMessage {
+  oneof automatic_join_type {
+    string match_made_chat_room_oid = 1; //if this is a match made chat room it will be set to the other user oid value
+    string yes_swipe_event_oid = 2; //if this chat room was from a user swiping yes on an event, this field will be set to the event oid
+  }
+}
+
+//generated on server inside extractChatRooms() on chat message stream startup
+//USED: (client <- server)
+message ThisUserLeftChatRoomChatMessage {
+}
+
+//this message is generated when clientMessageToServer() is called
+//the client does not actually generate any info, only the server generates a timestamp
+//USED: (client <-> server)
+message UserActivityDetectedChatMessage {}
+
+//this message is generated on the server when updateChatRoomInfo() is called
+//USED: (client <- server)
+message ChatRoomNameUpdatedChatMessage {
+  string new_chat_room_name = 1;
+}
+
+//this message is generated on the server when updateChatRoomInfo() is called
+//USED: (client <- server)
+message ChatRoomPasswordUpdatedChatMessage {
+  string new_chat_room_password = 1;
+}
+
+//this message is generated on the server when updateChatRoomInfo() is called
+//USED: (client <- server)
+message NewAdminPromotedChatMessage {
+  string promoted_account_oid = 1;
+}
+
+//USED: (client <- server)
+message ChatRoomCapMessage {}
+
+//USED: (client <- server)
+message NewPinnedLocationMessage {
+  double longitude = 1;
+  double latitude = 2;
+}
+
+//this message is generated on the server when unMatch() is called or the user is blockedAndReported
+//USED: (client <- server)
+message MatchCanceledChatMessage {
+  string matched_account_oid = 1;
+}
+
+message NewUpdateTimeMessage {
+  int64 message_timestamp_stored = 1;
+  string represented_message_uuid = 2;
+}
+
+message ServerDownMessage {}
+

@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+option java_package = "chat_message_to_client";
+option cc_enable_arenas = true;
+
+import "StatusEnum.proto";
+import "TypeOfChatMessage.proto";
+
+message ChatMessageToClient {
+
+  string message_uuid = 1; //the message UUID
+
+  int64 timestamp_stored = 2; //used to show time the timestamp was stored in the server (this is in milli seconds)
+  int64 current_timestamp = 3; //used to show the current time in milli seconds
+
+  bool only_store_message = 4; //this will be set to true if a client joined a new chat room and is requesting the older messages
+                               //if it is set to false then the client will act on the message (ex. if DIFFERENT_USER_JOINED_CHAT_ROOM is passed, that user will be added to the chat room)
+
+  //obsolete, this will be from InitialLoginMessageResponse inside ChatMessageStream.proto
+  //bool initial_stream_return = 5; //this will be set to true if this is a chat room message (THIS_USER_ message) from the initial login not from an active update
+
+  string sent_by_account_id = 5; //account id which sent this message
+  TypeOfChatMessage message = 6; //message info;
+
+  bool primer = 7; //used by joinChatRoom
+
+  ReturnStatus return_status = 8; //return status; used when primer = true; used when returning an invalid message from requestFullMessageInfo
+}

@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+
+package send_error_to_server;
+
+import "ErrorMessage.proto";
+
+message SendErrorRequest {
+    ErrorMessage message = 1;
+}
+
+message SendErrorResponse {
+  enum Status {
+    NO_VALUE_SET = 0;
+    SUCCESSFUL = 1;
+    OUTDATED_VERSION = 2;
+    DATABASE_DOWN = 3;
+    FAIL = 4;
+  }
+
+  Status return_status = 1;
+}
+
+service SendErrorService {
+  rpc SendErrorRPC(SendErrorRequest) returns (SendErrorResponse) {};
+}

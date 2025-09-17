@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+option java_package = "algorithm_search_options";
+
+enum AlgorithmSearchOptions {
+  USER_MATCHING_BY_CATEGORY_AND_ACTIVITY = 0;
+  USER_MATCHING_BY_ACTIVITY = 1;
+}

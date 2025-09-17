@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+
+package sms_verification;
+
+import "AccountLoginTypeEnum.proto";
+
+//send ~ for the empty string values instead of leaving them empty to tell
+message SMSVerificationRequest {
+
+  AccountLoginType account_type = 1;
+  string phone_number_or_account_id = 2; //pass phone number to log in with or account id for types facebook or google
+  string verification_code = 3; //verification code to create account
+  uint32 lets_go_version = 4; //pass current version of app
+  string installation_id = 5; //unique id for the device
+
+  //NOTE: Everything below this point is only needed when verification was required because installation_id is new.
+  // This will be signaled to the client when the loginFunction() returns birthday_not_needed == true during login. See
+  // sMS_verification/_documentation.md and login_function/_documentation.md on the server for more info.
+
+  enum InstallationIdAddedCommand {
+    VALUE_NOT_SET = 0; //this is the default value and should only be set if a failure in gRPC occurred
+    UPDATE_ACCOUNT = 1; //if a new device ID was added and the old phone # needs updated
+    CREATE_NEW_ACCOUNT = 2; //if a new device ID was added and the account needs replaced
+  }
+
+  InstallationIdAddedCommand installation_id_added_command = 6;
+
+  int32 installation_id_birth_year = 7;
+  int32 installation_id_birth_month = 8;
+  int32 installation_id_birth_day_of_month = 9;
+
+}
+
+//send ~ for the empty values instead of leaving them empty to tell
+//use -1 for empty integer
+message SMSVerificationResponse {
+
+  enum Status {
+    VALUE_NOT_SET = 0; // This is the default value and should only be set if a failure in gRPC occurred.
+    SUCCESS = 1; // Successfully created account or updated existing account.
+    OUTDATED_VERSION = 2; // lets_go_version was outdated.
+    VERIFICATION_CODE_EXPIRED = 3; // The verification code passed has expired and can no longer be used.
+    INVALID_PHONE_NUMBER_OR_ACCOUNT_ID = 4; // phone_number_or_account_id was invalid.
+    INVALID_VERIFICATION_CODE = 5; // verification_code was either invalid (size not VERIFICATION_CODE_NUMBER_OF_DIGITS) or did not match stored code.
+    INVALID_INSTALLATION_ID = 6; // installation_id was not a valid uuid.
+    PENDING_ACCOUNT_NOT_FOUND = 7; // Pending account (searched for by phone number & installation Id) was not found.
+    INCORRECT_BIRTHDAY = 8; // When an installation id was passed and installation_id_added_command == UPDATE_ACCOUNT. The birthday passed did not match the birthday stored in the user account.
+    INVALID_UPDATE_ACCOUNT_METHOD_PASSED = 9; // installation_id_added_command was an invalid value when attempting to add an installation id to INSTALLATION_IDS.
+    UNKNOWN = 10; // This means the function didn't set it for some reason.
+    DATABASE_DOWN = 11; // Error with database on server.
+    VERIFICATION_ON_COOLDOWN = 12; //function was called too quickly too many times and is now on cooldown
+    LG_ERROR = 13; // error
+  }
+
+  Status return_status = 1; //enum for status of response
+}
+
+service  SMSVerificationService {
+  rpc SMSVerificationRPC(SMSVerificationRequest) returns (SMSVerificationResponse) {}
+}

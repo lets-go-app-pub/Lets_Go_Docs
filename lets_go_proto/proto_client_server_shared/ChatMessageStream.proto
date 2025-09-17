@@ -1,0 +1,124 @@
+syntax = "proto3";
+
+package grpc_stream_chat;
+
+import "ChatMessageToClientMessage.proto";
+import "LoginToServerBasicInfo.proto";
+import "TypeOfChatMessage.proto";
+
+//these should be sent back to the client with onCompleted() as trailing MetaData
+enum StreamDownReasons {
+  UNKNOWN_STREAM_STOP_REASON = 0; //Nothing was set, this will be set sometimes, just re-connect once and if it doesn't work end.
+  RETURN_STATUS_ATTACHED = 1; //A return status is attached to the meta data to show the problem.
+  STREAM_TIMED_OUT = 2; //This means the stream timed out (The alarm for the async server expired).
+  STREAM_CANCELED_BY_ANOTHER_STREAM = 3; //This means a new stream started and canceled the running one (the installation id of the stream that called for the cancel will be sent back).
+  SERVER_SHUTTING_DOWN = 4; //The server is shutting down, this should go to a different server.
+}
+
+message ChatRoomValues {
+  string chat_room_id = 1; //chat room ids client has stored
+  //bool chat_room_inactive_on_device = 2; //true if the chat room is inactive on device (archived)
+  int64 chat_room_last_time_updated = 2; //last time this device update the chat room (the time of the most recent message this client has)
+  int64 chat_room_last_time_viewed = 3; //last time this device viewed the chat room
+  repeated string most_recent_message_uuids = 4; //uuid of the last few seconds worth of messages the client received for this chat room, these will be excluded from the search
+}
+
+//used as a convenience wrapper on server side
+message InitialLoginMessageRequest {
+  LoginToServerBasicInfo login_info = 1;
+
+  repeated ChatRoomValues chat_room_values = 2; //these are values the client sends to identify chat room info needed by the client (including matches)
+}
+
+message MessageUUIDWithAmountOfMessage {
+  AmountOfMessage amount_of_messages_to_request = 1;
+  string message_uuid = 2;
+}
+
+message RequestFullMessageInfoRequest {
+
+  //This will only request messages from 1 chat room at a time.
+  string chat_room_id = 1;
+  repeated MessageUUIDWithAmountOfMessage message_uuid_list = 2;
+}
+
+message PictureIndexInfo {
+  int32 index_number = 1; //index number of picture
+  int64 last_updated_timestamp = 2; //timestamp picture was last updated
+}
+
+message RefreshChatStreamRequest {}
+
+message ChatToServerRequest {
+  oneof client_request {
+    RequestFullMessageInfoRequest request_full_message_info = 1;
+    RefreshChatStreamRequest refresh_chat_stream = 2;
+  }
+
+  //This value is only used for testing purposes.
+  int64 testing_time_for_request_to_run_in_millis = 500;
+}
+
+message InitialConnectionPrimerResponse {
+  int64 time_until_chat_stream_expires_in_millis = 1;
+}
+
+//this message is a duplicate of the below message ReturnNewChatMessage, however it existing eliminates a boolean
+// inside of ChatMessageToClient and allows for future extendability
+message InitialConnectionMessagesResponse {
+  repeated ChatMessageToClient messages_list = 1;
+}
+
+message InitialConnectionMessagesCompleteResponse {}
+
+message RequestMessageInfoErrorMessage {
+  repeated string message_uuid_list = 1;
+}
+
+message RequestMessageInfoMessage {
+  repeated ChatMessageToClient full_message_list = 1;
+}
+
+message RequestFullMessageInfoResponse {
+  enum RequestStatus {
+    FINAL_MESSAGE_LIST = 0;
+    INTERMEDIATE_MESSAGE_LIST = 1;
+    CURRENTLY_PROCESSING_UPDATE_REQUEST = 2;
+    DATABASE_DOWN = 3;
+    USER_NOT_A_MEMBER_OF_CHAT_ROOM = 4;
+    LG_SERVER_ERROR = 5;
+  }
+
+  RequestStatus request_status = 1;
+  //Repeated can not be used directly inside oneof, so they are wrapped with a message.
+  oneof message_list_type {
+    RequestMessageInfoMessage full_messages = 2;
+    RequestMessageInfoErrorMessage error_messages = 3;
+  }
+  string chat_room_id = 4;
+}
+
+message RefreshChatStreamResponse {
+  //stream cannot be refreshed if it is too close to timeout, so it will return false for this bool
+  bool successfully_refreshed_time = 1;
+  int64 time_until_chat_stream_expires_in_millis = 2;
+}
+
+message ReturnNewChatMessage {
+  repeated ChatMessageToClient messages_list = 1;
+}
+
+message ChatToClientResponse {
+  oneof server_response {
+    InitialConnectionPrimerResponse initial_connection_primer_response = 1; //sent as first message during initialization
+    InitialConnectionMessagesResponse initial_connection_messages_response = 2; //'body' of initialization
+    InitialConnectionMessagesCompleteResponse initial_connection_messages_complete_response = 3; //sent when initialization is complete
+    RequestFullMessageInfoResponse request_full_message_info_response = 4;
+    RefreshChatStreamResponse refresh_chat_stream_response = 5;
+    ReturnNewChatMessage return_new_chat_message = 6;
+  }
+}
+
+service StreamChatService {
+  rpc StreamChatRPC(stream ChatToServerRequest) returns (stream ChatToClientResponse) {}
+}

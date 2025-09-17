@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option java_package = "account_state";
+
+//shared enum used on server and client, shows state of a specific account inside of a chat room
+//WARNING: be careful about changing these values, it will screw with the server values presently stored inside database
+enum AccountStateInChatRoom {
+    ACCOUNT_STATE_BANNED = 0; //account is not inside chat room and is banned
+
+    ACCOUNT_STATE_EVENT = 1; //account is the designated chat room event (only used on client and when sending back from server, not stored in server database ACCOUNTS array)
+    ACCOUNT_STATE_NOT_IN_CHAT_ROOM = 10; //account has left chat room (kicked or left, this is used to store the users info)\
+    ACCOUNT_STATE_IN_CHAT_ROOM = 20; //account is inside chat room
+    ACCOUNT_STATE_IS_ADMIN = 30; //account is inside chat room and is admin
+    ACCOUNT_STATE_IS_SUPER_ADMIN = 40; // NOT YET IMPLEMENTED
+
+    //ACCOUNT_STATE_DELETED = 5; //account has been deleted (not needed yet)
+}

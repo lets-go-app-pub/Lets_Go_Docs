@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package retrieve_server_load;
+
+message RetrieveServerLoadRequest {
+  bool request_num_clients = 1;
+}
+
+message RetrieveServerLoadResponse {
+  bool accepting_connections = 1;
+  int32 num_clients = 2;
+}
+
+service RetrieveServerLoadService {
+  rpc RetrieveServerLoadRPC(RetrieveServerLoadRequest) returns (RetrieveServerLoadResponse) {}
+}

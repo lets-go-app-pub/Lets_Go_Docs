@@ -1,0 +1,11 @@
+Older API setup (for testing but other things as well)
+-(Not sure this works anymore, the app might be out of date that comes with the emulator)
+-Open Google Maps at least once.
+-Turn Location on High Accuracy.
+
+
+
+Testing
+-Turn off animations in developer options (this is off in gradle settings for tests but it doesn't always seem to work).
+
+

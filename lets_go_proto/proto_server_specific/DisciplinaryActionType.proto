@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+enum DisciplinaryActionTypeEnum {
+  DISCIPLINE_ACCOUNT_TIME_OUT_SUSPENDED = 0; //account was suspended using time out
+  DISCIPLINE_ACCOUNT_TIME_OUT_BANNED = 1; //account was banned using time out
+  DISCIPLINE_ACCOUNT_MANUALLY_SET_TO_SUSPENDED = 2; //happens if an admin manually suspends
+  DISCIPLINE_ACCOUNT_MANUALLY_SET_TO_BANNED = 3; //happens if an admin manually bans
+  DISCIPLINE_ACCOUNT_MANUALLY_SET_TO_ACTIVE = 4; //happens if an admin manually un-suspends or un-bans a user
+  DISCIPLINE_ACCOUNT_MANUALLY_SET_TO_REQUIRES_MORE_INFO = 5; //happens if an admin manually un-suspends or un-bans a user
+}

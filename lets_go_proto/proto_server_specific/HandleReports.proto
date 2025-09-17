@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+import "LoginToServerBasicInfo.proto";
+import "ReportMessages.proto";
+import "RequestUserAccountInfo.proto";
+import "ChatMessageToClientMessage.proto";
+import "UserAccountStatusEnum.proto";
+
+option java_multiple_files = true;
+
+package handle_reports;
+
+message RequestReportsRequest {
+  LoginToServerBasicInfo login_info = 1;
+
+  int32 number_user_to_request = 2;
+}
+
+message SingleReport {
+  string account_oid_of_report_sender = 1;
+  ReportReason report_reason = 2;
+
+  //'~' is empty message
+  string message = 3;
+
+  ReportOriginType origin_type = 4;
+
+  string chat_room_id = 5;
+
+  string message_uuid = 6;
+
+  int64 timestamp_submitted = 7;
+}
+
+message ReportedUserInfo {
+  string user_account_oid = 1;
+  repeated SingleReport reports_log = 2;
+}
+
+message ReportStreamCompleted {
+  //oid of the completed report
+  string user_account_oid = 1;
+}
+
+message NoReportsToReturnMessage {}
+
+message ReturnedInfo {
+  oneof returned_info {
+    ReportedUserInfo reported_user_info = 1; //report info for a single reported user
+    CompleteUserAccountInfo user_account_info = 2; //reported user account info
+    ChatMessageToClient chat_message = 3; //message uuid referenced by the report (can be multiple messages sent back)
+    ReportStreamCompleted completed = 4; //used when all info for the report has been returned
+    NoReportsToReturnMessage no_reports = 5; //used when no more reports exist in database
+  }
+}
+
+message RequestReportsResponse {
+
+  //if successful == false, stream will end
+  bool successful = 1;
+
+  //set if successful == false for any values
+  string error_message = 2;
+
+  //set if successful == true
+  ReturnedInfo returned_info = 3;
+}
+
+message TimeOutUserRequest {
+  LoginToServerBasicInfo login_info = 1;
+
+  string user_oid = 2;
+  string inactive_message = 3;
+}
+
+message TimeOutUserResponse {
+  bool successful = 1; //true if was successfully updated
+  string error_message = 2; //set if successful == false
+
+  //values below are set if successful == true
+  UserAccountStatus updated_user_account_status = 3;
+  int64 timestamp_last_updated = 4;
+  int64 timestamp_suspension_expires = 5;
+}
+
+message ReportUnaryCallRequest {
+  LoginToServerBasicInfo login_info = 1;
+
+  string user_oid = 2;
+}
+
+message ReportResponseUnaryCallResponse {
+  bool successful = 1; //true if was successfully updated
+  string error_message = 2; //set if successful == false for any values
+}
+
+service HandleReportsService {
+  rpc RequestReportsRPC(RequestReportsRequest) returns (stream RequestReportsResponse) {}
+  rpc TimeOutUserRPC(TimeOutUserRequest) returns (TimeOutUserResponse) {}
+  rpc DismissReportRPC(ReportUnaryCallRequest) returns (ReportResponseUnaryCallResponse) {}
+  rpc SetReportToSpamRPC (ReportUnaryCallRequest) returns (ReportResponseUnaryCallResponse) {}
+}
